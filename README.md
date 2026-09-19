@@ -71,9 +71,15 @@ The repository `.gitignore` is configured to exclude these files. See `SECURITY.
 
 Generated output belongs under ignored output locations and should not be committed unless it is intentionally part of the source package. Keep deployment configuration environment-specific and avoid embedding production endpoints or credentials in source.
 
+## Third-party assets
+
+The bundled Noto Sans CJK font files under `assets/fonts/` are third-party font software distributed under the **SIL Open Font License 1.1**. Their license is included at `assets/fonts/LICENSE-OFL.txt`.
+
+This third-party font license applies to the bundled fonts only; it does not license the Sky Education source code.
+
 ## License
 
-No open-source license is currently included in this repository.
+No open-source license is currently included for the Sky Education source code in this repository.
 
 ## Ownership
 
