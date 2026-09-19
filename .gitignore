@@ -11,6 +11,10 @@ venv/
 
 # Local secrets / env
 .env
+.env.*
+!.env.example
+*.pem
+*.key
 
 # Local GUI config (may contain tokens)
 gui_config.json
@@ -18,9 +22,10 @@ gui_config.json
 # Generated output
 output/
 
-# IDE
+# IDE / local tooling
 .idea/
 .vscode/
+.ai/
 
 # OS
 .DS_Store
