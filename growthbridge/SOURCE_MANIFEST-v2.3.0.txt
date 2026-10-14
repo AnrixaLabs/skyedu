@@ -1,0 +1,37 @@
+SKYED_GROWTHBRIDGE_SOURCE_MANIFEST=v2.3.0
+RELEASE=Operational Product Release
+BASELINE=v2.2.0_MULTI_INSTITUTION_ARCHITECTURE
+MANIFEST_SELF_HASH=OMITTED_RECURSIVE_BY_DESIGN
+FILE_COUNT=31
+
+5d89760f2ceef12f085e25b7f2a9f7a801930f970fbc4e743f520c13a293abc6         54  .gitignore
+366af11709eb5d468ceed2484e9b678e0825eb952b1d1f9ce7d84b58b36f54cc       2806  ARCHITECTURE-v2.1.md
+3547a78021446f3585170fc590a7089b9b87146b2fa43ce0c1bec538cfdf8fa2       1756  ARCHITECTURE-v2.2.md
+a43a39ab7ebdb7c9c0acced8f758d66b13f1a13e2ce85b1ecbd778b0242ca38a       4421  ARCHITECTURE-v2.3.md
+a43a39ab7ebdb7c9c0acced8f758d66b13f1a13e2ce85b1ecbd778b0242ca38a       4421  ARCHITECTURE.md
+a1f682d0d23637a1d2e4516020eb4b965a7c7825e5fe96bfd9c867582a100dec       1647  DEPLOYMENT.md
+025fb2ca425c9049a5e268707c661878bca5fa44fe98c609c459b364daa150b2       4129  README.md
+dbb6584a1b631e5bf6d0e5338c9c7e36b2df688c558662c7268fc29d39849418       2139  ROADMAP.md
+3e3fc9a85f2e13ba243a6ac9c7c665de18e844de51d623292af5da0a839d052d       1823  VALIDATION.md
+59b6133d280b57ea9d79a96a71dd0dbb2d8445e3b9708e55b9249ab75bb2b0c9     126498  backend/server.py
+83b94e4efee86683e11f1bcec00bf3a8834f8236e6dca2771575434821bfe9aa       9106  backend/test_multitenant.py
+f3c51e7880d73f2a2fc56e38a6369933dd3f12e5926fa481a58397e73bbfb68a      11914  backend/test_operational.py
+aca12013f750dcb2d1a96190d1bf2cf989ca65e2df7d1df029bcdf05f63014a2        872  index.html
+7fd5bb2e6974f467de6a84126cf9973a7277303b256702bac155afd38ea37f3c        683  package.json
+4e4ca061cbdad3f554d258592ae69d6178ab4eb10659ffd3339b51dd5382bb57        532  public/icon.svg
+9975837905f97da1e845616b81099061d986d5699c45b079fd4b7ddefc886c08        546  public/parent-manifest.webmanifest
+2ad8b11cdcae62ba682fcd38e9b7539f0acc43776eebb1cfb40c4b45bb0850ea       1439  public/sw.js
+f6ac95d4315944dd0565d62ed9e003275d3da3be28bd8c7fa23aeb4ab0f154b9        542  public/teacher-manifest.webmanifest
+2327397cc0b31136381e4fd9fc654eb71bfffb1bf073d3d9e5de1cab2db4458e      16616  src/App.tsx
+c94b582c9d8be54ec8f5d068f3e83bfc7888016b40ac5c6ffb758fb39f79a47d       5742  src/components/AppShell.tsx
+34c8f1dcfcd0311a1c31c79283c3d653962655ee44fdc9c2442b4be33aee52f8       8971  src/components/AuthViews.tsx
+8e89ef9ed9ad6aada9d8e1453be78fcf2e6e4d644ed81ba16d062bd2008d9412      75525  src/components/WorkspaceViews.tsx
+eea2616123a66a091e173e3a07507552f6fda9d763148bf192e4234db75978d2      17772  src/lib/api.ts
+6d9342ee28a7d891a991b193525bca331673f6dd7f51cf9306f80b34693f291c       4844  src/lib/i18n.ts
+85513101d83901faebe05102da23136b968352b59d4040c51740cf8d4c54c199       1164  src/main.tsx
+eeecc11cef4e6806d5407c20c8d307017e89650519c62dc47fb1f4b1f8dcae69      64206  src/styles/app.css
+17d28684753da2a9f82b540e6f249d401de48e53d92c8cbf86b79a4b1371e564       2913  src/types/domain.ts
+a7266d1c85fa6947c70073256d9a73e4c459e97b0b4ef24b5c48dcab498ef4c5        507  tsconfig.app.json
+770b4140bbb581e2dfd9ea9946ffc9c75a1d86ba7d2db5f77c83e37cbdf9d808        119  tsconfig.json
+3dc28b63563e20fab0d9f652f3039ed50e6c46bbdec66631a14822e8309b230d        231  tsconfig.node.json
+526d1e0b4aae7f4aaa381a7afeeaf7017eae86a8431d339cbdbdb1f9d74285cb        212  vite.config.ts
