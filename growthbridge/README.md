@@ -2,9 +2,11 @@
 
 GrowthBridge is the independent family-facing growth/evidence platform in the SkyED ecosystem. It remains separate from ClassFlow and uses stable API/domain boundaries rather than direct ClassFlow database coupling.
 
-## Current controlled release
+## Current controlled successor
 
-**v2.2.0 — multi-institution foundation**
+**v2.3.0 — Operational Product Release**
+
+Production baseline while this branch is under review: **v2.2.0**.
 
 Production target: `https://growth.skyed.org`
 
@@ -12,24 +14,29 @@ Production target: `https://growth.skyed.org`
 - Teacher Client: `/teacher/`
 - Versioned API: `/api/v1/`
 
-## v2.2 model
+## Architectural baseline
 
-GrowthBridge is no longer demo-seed-driven. The authoritative persistent model is institution-scoped and includes:
+v2.3 preserves the validated v2.2 multi-institution model. It is an operational-product release, not a tenancy/backend rewrite.
+
+The authoritative model includes:
 
 - global Parent and Teacher accounts plus multi-device sessions;
 - institutions/schools with `owner`, `admin`, and `teacher` memberships;
-- teacher self-registration;
-- school-code join requests with Owner/Admin approval;
-- secure teacher invitations with optional class pre-assignment;
-- institution-owned class database;
-- institution-owned student database;
-- class rosters;
-- teacher ↔ class access assignments;
+- school-code join requests and secure teacher invitations;
+- institution-owned classes and students;
+- class rosters and teacher ↔ class access assignments;
 - one-time Parent ↔ child claim codes;
 - parent accounts that can link children from multiple institutions;
-- institution/class/student-scoped growth evidence;
-- class sessions and attendance records;
+- institution/class/student-scoped evidence;
+- class sessions and attendance;
+- parent actions;
 - audit records for security-relevant mutations.
+
+## v2.3 operational scope
+
+Teacher operations now include institution switching, class/student/roster management, claim-code management, session history and corrections, attendance, evidence editing/publishing, milestones, parent actions, reports, join-request handling, invitation revocation, staff role/status controls, teacher-class assignments, and audit viewing.
+
+Parent operations now include cross-institution child switching, child claiming/unlinking, published evidence, milestones, attendance/classroom history, parent actions, period reports, profile/password management, and multi-device session revocation.
 
 ## Access rules
 
@@ -42,20 +49,20 @@ Backend authorization is authoritative.
 
 ## Synchronization
 
-Parent and Teacher desktop/mobile PWAs use the same `/api/v1/` backend and persistent store. The service worker never caches `/api/` responses. Client state refreshes after mutations, on focus/visibility changes, and at a bounded interval.
+Parent and Teacher desktop/mobile PWAs use the same `/api/v1/` backend and persistent store. The service worker never caches `/api/` responses. Clients refresh after mutations and on focus/visibility changes.
 
-## Current persistence
+## Persistence and migration
 
 Single-node production uses SQLite WAL at:
 
 `/opt/skyed-growthbridge/data/growthbridge.db`
 
-The schema is normalized and intentionally PostgreSQL-mappable. PostgreSQL is the required scale gate before multi-node API deployment.
+v2.3 uses additive migration only. The deployment controller performs database backup, integrity checks, post-migration integrity checks, and core-table row-preservation gates. PostgreSQL remains the scale gate before multi-node API deployment.
 
 ## Release artifacts
 
-Canonical source package: `SkyED-GrowthBridge-v2.2.0-source.zip`
+Canonical source package: `SkyED-GrowthBridge-v2.3.0-source.zip`
 
-Canonical deployment launcher: `Start-SkyED-GrowthBridge-v2.2.0-Deploy-SFX-v1.0.0.ps1`
+Canonical deployment launcher: `Start-SkyED-GrowthBridge-v2.3.0-Deploy-SFX-v1.0.0.ps1`
 
-See `RELEASE-v2.2.0.md` for SHA-256 values and validation gates.
+See `RELEASE-v2.3.0.md`, `ARCHITECTURE-v2.3.md`, and `SOURCE_MANIFEST-v2.3.0.txt` for the controlled release record.
