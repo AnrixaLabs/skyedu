@@ -26,6 +26,15 @@ jobs:
       - name: PHP plugin lint (when PHP CLI available)
         run: |
           if command -v php >/dev/null; then php -l wp_plugin/skyed-lesson-renderer/skyed-lesson-renderer.php; else echo 'PHP CLI missing — release must be reviewed manually'; exit 1; fi
+      - name: Build review-only WordPress plugin ZIP
+        run: python scripts/package_wp_plugin.py --repo . --output SkyED-Lesson-Renderer-v0.4.6-REVIEW.zip
+      - name: Upload review-only WordPress plugin ZIP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyed-renderer-v0.4.6-review-not-approved-for-production
+          path: SkyED-Lesson-Renderer-v0.4.6-REVIEW.zip
+          if-no-files-found: ignore
       - name: Pure-Python regression tests
         run: python scripts/run_pure_tests.py
       - name: Verify required project modules exist (release blocker)
