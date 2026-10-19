@@ -733,7 +733,7 @@ class SkyEd_Lesson_Renderer {
             <section class="skyed-section skyed-section--practice">
               <div class="skyed-section__head">
                 <div>
-                  <div class="skyed-section__eyebrow"><?php echo $theme === 'sky_tiles' ? 'Listen and tap' : self::esc($practice_family); ?></div>
+                  <div class="skyed-section__eyebrow"><?php echo $theme === 'sky_tiles' ? 'Listen and tap' : ($theme === 'fun_mission' ? 'Mission checkpoint' : ($theme === 'strict_dark' ? 'Study check' : 'Practice')); ?></div>
                   <h2 class="skyed-section__title"><?php echo $theme === 'sky_tiles' ? 'Picture Quiz' : self::esc($practice_title); ?></h2>
                 </div>
                 <div class="skyed-section__note"><?php echo self::esc($copy['practice_note']); ?></div>
