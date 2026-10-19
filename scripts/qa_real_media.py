@@ -15,6 +15,12 @@ import subprocess
 import sys
 import zipfile
 
+# Executing scripts/qa_real_media.py directly places only scripts/ on sys.path.
+# Verify against THIS checkout's real package, never site-packages or cwd.
+SOURCE_ROOT = Path(__file__).resolve().parents[1]
+if str(SOURCE_ROOT) not in sys.path:
+    sys.path.insert(0, str(SOURCE_ROOT))
+
 SAMPLE = """#Title: SkyED Media QA - Animals and Toys
 #Tags: animals, toys
 #Vocabulary:
@@ -127,6 +133,30 @@ def validate_lesson(lesson: Path) -> tuple[dict, list[dict]]:
         p.relative_to(lesson).as_posix() for p in lesson.rglob("*")
         if p.is_file() and p.name.endswith((".fallback.txt", ".fail.txt"))
     ]
+    # The generated website card can be a valid PNG while the original image
+    # is just a "no matching asset" placeholder. Never confuse file integrity
+    # with illustration/content quality.
+    report_path = lesson / "cards" / "image_report.json"
+    bad_image_statuses = []
+    image_rows = []
+    if report_path.is_file():
+        parsed = json.loads(report_path.read_text(encoding="utf-8"))
+        if isinstance(parsed, list):
+            image_rows = parsed
+    by_word = {
+        str(row.get("word") or "").strip().casefold(): row
+        for row in image_rows if isinstance(row, dict)
+    }
+    allowed_statuses = {"accepted", "local_asset_match"}
+    for vocab in spec.get("vocab") or []:
+        if not isinstance(vocab, dict) or not str(vocab.get("en") or "").strip():
+            continue
+        word = str(vocab["en"]).strip()
+        record = by_word.get(word.casefold())
+        status = str((record or {}).get("status") or "missing_image_report")
+        if status not in allowed_statuses:
+            bad_image_statuses.append({"word": word, "status": status})
+    quality = "REVIEW_REQUIRED" if not bad_image_statuses else "BLOCKED_PLACEHOLDER_OR_FALLBACK"
     summary = {
         "status": "PASS" if not failures else "FAIL",
         "media_count": len(inspected),
@@ -134,6 +164,11 @@ def validate_lesson(lesson: Path) -> tuple[dict, list[dict]]:
         "mp3_count": sum(p.endswith(".mp3") for p in inspected),
         "local_media_gate": gate,
         "fallback_markers": sorted(fallbacks),
+        "image_source_statuses": sorted(
+            [{"word": key, "status": str(row.get("status") or "")} for key, row in by_word.items()],
+            key=lambda x: x["word"]),
+        "visual_quality_status": quality,
+        "visual_quality_blockers": bad_image_statuses,
         "manual_image_and_audio_review": "REQUIRED",
         "production_publish_authorized": False,
         "failures": failures,
@@ -209,7 +244,12 @@ def generate(repo: Path, output: Path, timeout: int) -> dict:
         try:
             summary, checked_files = validate_lesson(lessons[0])
             result.update(summary)
-            result["status"] = "TECHNICAL_MEDIA_PASS" if summary["status"] == "PASS" else "BLOCKED"
+            if summary["status"] != "PASS":
+                result["status"] = "BLOCKED_MEDIA_INTEGRITY"
+            elif summary["visual_quality_blockers"]:
+                result["status"] = "BLOCKED_VISUAL_CONTENT"
+            else:
+                result["status"] = "TECHNICAL_MEDIA_PASS"
         except Exception as exc:
             result["failures"] = [f"Validation failed: {type(exc).__name__}: {exc}"]
 
@@ -222,14 +262,31 @@ def generate(repo: Path, output: Path, timeout: int) -> dict:
             if p.is_file():
                 z.write(p, p.relative_to(output).as_posix())
         if len(lessons) == 1:
-            for name in ("quiz.json", "spec_debug.json", "image_report.json", "lesson_manifest.json"):
-                p = lessons[0] / name
-                if p.is_file():
-                    z.write(p, f"lesson/{name}")
-            for entry in checked_files:
-                p = lessons[0] / entry["path"]
+            # Always preserve the actual media bytes and image provenance,
+            # even when a media validation or quality gate fails.
+            for rel in ("quiz.json", "spec_debug.json", "lesson_manifest.json",
+                        "lesson.html", "index.html", "cards/image_report.json",
+                        "cards/image_specs.json"):
+                p = lessons[0] / rel
                 if p.is_file() and p.stat().st_size <= 8 * 1024 * 1024:
-                    z.write(p, f"lesson/{entry['path']}")
+                    z.write(p, f"lesson/{rel}")
+            lesson_root = lessons[0].resolve()
+            total_bytes = 0
+            for folder in ("cards", "audio"):
+                for p in sorted((lesson_root / folder).rglob("*")):
+                    if (not p.is_file() or p.is_symlink() or
+                        p.suffix.lower() not in {".png", ".mp3", ".txt"}):
+                        continue
+                    if not p.resolve().is_relative_to(lesson_root):
+                        continue
+                    # Avoid generating overly large evidence bundles.
+                    if p.stat().st_size > 8 * 1024 * 1024 or total_bytes + p.stat().st_size > 100 * 1024 * 1024:
+                        continue
+                    rel = p.relative_to(lesson_root).as_posix()
+                    if f"lesson/{rel}" in z.namelist():
+                        continue
+                    z.write(p, f"lesson/{rel}")
+                    total_bytes += p.stat().st_size
     result["evidence_zip"] = str(archive)
     result["evidence_sha256"] = sha256(archive)
     return result
