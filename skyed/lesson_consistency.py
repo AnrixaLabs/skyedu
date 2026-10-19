@@ -30,7 +30,7 @@ def unused_vocabulary(spec: dict[str, Any]) -> list[str]:
             continue
         seen.add(normalized)
         # Boundary + flexible whitespace for multiple-word expressions.
-        needle = r"(?<!\\w)" + r"\\s+".join(re.escape(part) for part in word.split()) + r"(?!\\w)"
+        needle = r"(?<!\w)" + r"\s+".join(re.escape(part) for part in word.split()) + r"(?!\w)"
         if not re.search(needle, sentences, flags=re.IGNORECASE):
             unused.append(word)
     return unused
