@@ -19,8 +19,10 @@ The GitHub checkout is incomplete, as proven by Python imports referencing absen
 Known examples: `skyed/pipeline_helpers.py`, `skyed/lesson_metadata.py`,
 `skyed/tag_registry.py`, `skyed/picture_reader.py`,
 `skyed/tag_creator.py`, `skyed/tag_game_profiles.py`,
-`skyed/asset_library.py`, and `skyed/scene_fallbacks.py`.
-This is not necessarily exhaustive. Some files may be only present on Windows.
+`skyed/asset_library.py`, `skyed/scene_fallbacks.py`, `skyed/thematic_backgrounds.py`,
+`skyed/tag_s_env.py`, `skyed/fallback_cards.py`, and `skyed/image_semantics.py`.
+A read-only source scan identified at least **12 distinct missing modules**.
+The integrity tool is the authoritative checker, including dynamic source additions. Some files may be only present on Windows.
 GitHub commits for several named paths had no historical copy.
 
 Run:
