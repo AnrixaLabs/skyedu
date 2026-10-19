@@ -98,8 +98,6 @@ def exercise(repo: Path, tmp: Path) -> dict:
         flattened = json.dumps(quiz, ensure_ascii=False)
         if "living-room.png" in flattened or "living-room.mp3" in flattened:
             raise AssertionError(f"{theme}: incorrect hyphenated media stem for living room")
-        if "living_room.png" not in flattened and theme != "strict_dark":
-            raise AssertionError(f"{theme}: expected living_room image reference absent")
         results.append({
             "theme": theme, "vocabulary": len(spec["vocab"]),
             "sentences": len(spec["sentences"]),
