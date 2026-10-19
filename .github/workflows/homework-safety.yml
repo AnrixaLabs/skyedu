@@ -47,6 +47,23 @@ jobs:
           if-no-files-found: ignore
       - name: Pure-Python regression tests
         run: python scripts/run_pure_tests.py
+      - name: Install minimum offline generator runtime
+        run: python -m pip install 'python-dotenv>=1,<2' 'requests>=2.31,<3' 'Pillow>=10,<13' 'numpy>=1.26,<3'
+      - name: Import real generator and inspect CLI
+        run: |
+          python -c "import skyed; import run_pipeline; print('REAL_GENERATOR_IMPORT=PASS')"
+          python run_pipeline.py --help > generator-cli-help.txt
+      - name: Rehearse four lesson themes with real pipeline (no media or publishing)
+        run: python scripts/smoke_generator_offline.py --repo . --report smoke-report.json
+      - name: Preserve offline generator evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyed-offline-generator-qa
+          path: |
+            smoke-report.json
+            generator-cli-help.txt
+          if-no-files-found: ignore
       - name: Verify required project modules exist (release blocker)
         if: always()
         run: python scripts/verify_repo_integrity.py --repo . --json integrity-report.json
