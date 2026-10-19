@@ -15,11 +15,18 @@ class LessonConsistencyTests(unittest.TestCase):
         spec = {"vocab": [{"en": w} for w in words],
                 "sentences": [{"en": s} for s in sentences]}
         self.assertEqual(unused_vocabulary(spec), ["bedroom", "house", "family", "daddy"])
+        report = correct_consistency_report(spec, {"coverage_ratio": 0.0})
+        self.assertEqual(report["vocab_seen_in_sentences"], [
+            "bathroom", "kitchen", "living room", "grandma", "grandpa",
+            "mommy", "brother", "sister", "baby",
+        ])
+        self.assertEqual(report["coverage_ratio"], round(9 / 13, 3))
 
     def test_preserve_extra_report_fields(self):
         spec = {"vocab": [{"en": "cat"}], "sentences": [{"en": "cat!"}]}
         self.assertEqual(correct_consistency_report(spec, {"ok": 3}),
-                         {"ok": 3, "vocab_not_seen_in_sentences": []})
+                         {"ok": 3, "vocab_seen_in_sentences": ["cat"],
+                          "vocab_not_seen_in_sentences": [], "coverage_ratio": 1.0})
 
     def test_word_boundaries(self):
         spec = {"vocab": [{"en": "cat"}, {"en": "at"}], "sentences": [{"en": "Cats are cute."}]}
