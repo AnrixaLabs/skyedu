@@ -1,6 +1,7 @@
 """Fail-closed pre-publication guards for SkyED WordPress homework."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any, Callable, Dict, List
 from urllib.parse import urlsplit
@@ -95,6 +96,54 @@ def validate_local_media(
     if failures:
         raise PublishGateError("Local media preflight blocked publication:\n" + "\n".join(failures[:30]))
     return result
+
+
+def validate_image_source_quality(lesson_root: Path, spec: Dict[str, Any], page_kind: str = "lesson") -> Dict[str, Any]:
+    """Prevent publishing vocabulary cards whose source is a placeholder/fallback.
+
+    Does not replace teacher review: an 'accepted' AI or local asset may still
+    depict the wrong word. This gate only detects known machine-reported
+    nonproduction image sources.
+    """
+    if page_kind == "picture_reader":
+        return {"status": "PASS", "checked": 0, "reason": "picture_reader_skip"}
+    words = [
+        str(item.get("en") or "").strip()
+        for item in spec.get("vocab", []) or []
+        if isinstance(item, dict) and str(item.get("en") or "").strip()
+    ]
+    if not words:
+        return {"status": "PASS", "checked": 0}
+    report_path = Path(lesson_root) / "cards" / "image_report.json"
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise PublishGateError(
+            f"Image source report unavailable or invalid: {report_path} ({type(exc).__name__}). "
+            "Refusing to publish without image provenance."
+        ) from exc
+    if not isinstance(report, list):
+        raise PublishGateError("Image source report must be a list of vocabulary rows")
+    by_word = {}
+    for item in report:
+        if not isinstance(item, dict):
+            continue
+        normalized = str(item.get("word") or "").strip().casefold()
+        if normalized:
+            by_word[normalized] = item
+    allowed = {"accepted", "local_asset_match"}
+    blocked = []
+    for word in words:
+        status = str(by_word.get(word.casefold(), {}).get("status") or "missing")
+        if status not in allowed:
+            blocked.append(f"{word}: {status}")
+    if blocked:
+        raise PublishGateError(
+            "Placeholder/fallback/unknown image source blocks publication: "
+            + "; ".join(blocked[:20])
+            + ". Generate suitable images and obtain teacher review before publishing."
+        )
+    return {"status": "PASS", "checked": len(words), "teacher_visual_review": "REQUIRED"}
 
 
 def _check_url(url: str, context: str, failures: List[str]) -> None:
