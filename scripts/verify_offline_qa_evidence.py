@@ -46,6 +46,17 @@ def _read_json(archive: zipfile.ZipFile, name: str) -> dict[str, Any]:
     return parsed
 
 
+def _read_log_text(raw: bytes) -> tuple[str, str]:
+    """Decode historical Windows PowerShell UTF-16 and current UTF-8 logs."""
+    if raw.startswith((b"\xff\xfe", b"\xfe\xff")):
+        return raw.decode("utf-16"), "utf-16"
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return raw.decode("utf-8-sig"), "utf-8-sig"
+    if len(raw) >= 10 and raw[1::2].count(0) * 4 > len(raw[1::2]) * 3:
+        return raw.decode("utf-16-le"), "utf-16-le"
+    return raw.decode("utf-8"), "utf-8"
+
+
 def verify(archive_path: Path) -> dict[str, Any]:
     verdict: dict[str, Any] = {
         "status": "BLOCKED",
@@ -98,12 +109,15 @@ def verify(archive_path: Path) -> dict[str, Any]:
                 raise ValueError("Missing unit test execution log")
             if z.getinfo("unit-tests.log").file_size > MAX_FILE_SIZE:
                 raise ValueError("Unit log exceeds safety limit")
-            test_log = z.read("unit-tests.log").decode("utf-8-sig", errors="replace")
-            if not re.search(r"Ran\s+\d+\s+tests?\s+in\s+[\d.]+s", test_log):
+            test_log, log_encoding = _read_log_text(z.read("unit-tests.log"))
+            match = re.search(r"Ran\s+(\d+)\s+tests?\s+in\s+[\d.]+s", test_log)
+            if not match:
                 raise ValueError("No test-count summary")
             if not re.search(r"(?m)^OK(?:\s|$)", test_log):
                 raise ValueError("Tests do not report OK")
             verdict["status"] = "PASS"
+            verdict["unit_test_count"] = int(match.group(1))
+            verdict["test_log_encoding"] = log_encoding
             verdict["theme_count"] = len(variants)
             verdict["limitations"] = [
                 "Dry-run does not generate or validate real MP3/image bytes",
