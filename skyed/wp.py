@@ -20,6 +20,11 @@ class WPError(RuntimeError):
     pass
 
 
+class WPAmbiguousWriteError(WPError):
+    """WordPress may have committed a write; retries may duplicate it."""
+    pass
+
+
 # -----------------------------------------------------------------------------
 # Shared process-level transport caches
 # -----------------------------------------------------------------------------
@@ -62,7 +67,7 @@ def _normalize_base_url(raw: str) -> str:
         raise WPError(
             "Invalid wp_base_url (missing http/https scheme).\n"
             f"Got: {raw!r}\n"
-            "Expected like: https://skyedu.fun"
+            "Expected like: https://skyed.org"
         )
     return s
 
@@ -86,7 +91,7 @@ def _new_session() -> requests.Session:
         read=2,
         backoff_factor=0.7,
         status_forcelist=(429, 500, 502, 503, 504),
-        allowed_methods=frozenset({"GET", "HEAD", "POST"}),
+        allowed_methods=frozenset({"GET", "HEAD"}),  # Never retry non-idempotent POSTs.
         raise_on_status=False,
     )
     adapter = HTTPAdapter(max_retries=retry, pool_connections=16, pool_maxsize=32)
@@ -145,7 +150,11 @@ def _request(
         _dbg(f"{method} {url} -> {r.status_code} in {time.perf_counter() - t0:.2f}s")
         return r
     except Exception as e:
-        raise WPError(f"Request failed: {method} {url}\n{e}") from e
+        if method.upper() not in {"GET", "HEAD"}:
+            raise WPAmbiguousWriteError(
+                f"WordPress write outcome uncertain; do not retry automatically: {method} {url}\\n{e}"
+            ) from e
+        raise WPError(f"Request failed: {method} {url}\\n{e}") from e
 
 
 def _probe_rest_index(wp_base_url: str, timeout: int = 20) -> None:
@@ -269,6 +278,8 @@ def upload_media(
             t0 = time.perf_counter()
             try:
                 r = uploader(url, auth, file_path, mime, timeout, sess)
+            except WPAmbiguousWriteError:
+                raise
             except Exception as e:
                 errors.append(f"{mode_name} {url} -> EXC {e}")
                 continue
@@ -292,6 +303,10 @@ def upload_media(
                 )
                 continue
 
+            if r.status_code == 429 or r.status_code >= 500:
+                raise WPAmbiguousWriteError(
+                    f"Media upload returned {r.status_code}; outcome uncertain, refusing fallback: {url}"
+                )
             if r.status_code >= 400:
                 errors.append(f"{mode_name} {url} -> {r.status_code}. Body: {body_head}")
                 continue
@@ -299,11 +314,9 @@ def upload_media(
             try:
                 return r.json()
             except Exception:
-                errors.append(
-                    f"{mode_name} {url} -> non-JSON response "
-                    f"(content-type={(r.headers.get('content-type') or '').lower()}). Body: {body_head}"
+                raise WPAmbiguousWriteError(
+                    f"Upload succeeded but non-JSON response; do not risk duplicate media: {url}"
                 )
-                continue
 
     raise WPError(
         "All media upload attempts failed.\n"
@@ -577,11 +590,17 @@ def create_post(
                 timeout=timeout,
                 session=sess,
             )
+        except WPAmbiguousWriteError:
+            raise
         except Exception as e:
             errors.append(f"{url} -> EXC {e}")
             continue
 
         _dbg(f"create_post {url} -> {r.status_code} in {time.perf_counter() - t0:.2f}s")
+        if r.status_code == 429 or r.status_code >= 500:
+            raise WPAmbiguousWriteError(
+                f"Post creation returned {r.status_code}; refusing unsafe retry/fallback: {url}"
+            )
 
         if r.status_code < 400:
             try:
