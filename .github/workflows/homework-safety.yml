@@ -28,11 +28,15 @@ jobs:
         run: |
           $tokens = $null
           $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path scripts/Find-SkyED-Original-Source-v2.0.4.ps1),
-            [ref]$tokens, [ref]$errors
-          ) | Out-Null
-          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          foreach ($scriptName in @('Find-SkyED-Original-Source-v2.0.4.ps1', 'Run-SkyED-Offline-QA-v2.0.8.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path (Join-Path scripts $scriptName)),
+              [ref]$tokens, [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          }
       - name: PHP plugin lint (when PHP CLI available)
         run: |
           if command -v php >/dev/null; then php -l wp_plugin/skyed-lesson-renderer/skyed-lesson-renderer.php; else echo 'PHP CLI missing — release must be reviewed manually'; exit 1; fi
