@@ -1,0 +1,36 @@
+name: Homework safety gates
+on:
+  pull_request:
+    paths:
+      - 'run_pipeline.py'
+      - 'skyed/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'wp_plugin/**'
+      - '.env.example'
+      - '.github/workflows/homework-safety.yml'
+  workflow_dispatch:
+
+jobs:
+  verify-homework:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Python syntax check
+        run: python -m compileall -q skyed scripts run_pipeline.py pyside_gui.py tests
+      - name: Pure-Python regression tests
+        run: python -m unittest discover -s tests -v
+      - name: Verify required project modules exist (release blocker)
+        run: python scripts/verify_repo_integrity.py --repo . --json integrity-report.json
+      - name: Upload integrity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyed-homework-integrity
+          path: integrity-report.json
+          if-no-files-found: ignore
