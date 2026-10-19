@@ -92,3 +92,22 @@ Retain original plugin ZIP and a database snapshot. Rollback is file restore + W
 ## Current completion criteria
 
 Current task is **development hardening**, NOT production-ready: pass missing-source gate and run complete end-to-end rehearsal before release approval.
+
+
+## Original module recovery action — 2026-10-19
+
+The following original Python modules are absent from *all five* accessible SkyED repository branches: `asset_library`, `fallback_cards`, `image_semantics`, `lesson_metadata`, `picture_reader`, `pipeline_helpers`, `scene_fallbacks`, `tag_creator`, `tag_game_profiles`, `tag_registry`, `tag_s_env`, `thematic_backgrounds` (all in `skyed/`, extension `.py`).
+
+Do not reimplement these as placeholders. Use the additively packaged **SkyED-Homework-Hardening-v2.0.4** Windows recovery tool to locate authentic originals on the workstation, inspect exact source-root provenance and SHA256, and export reviewed source files. The package also contains a read-only archive verifier, unit tests, and complete instructions.
+
+For an existing working GitHub checkout, this repository already includes the original preview-first no-overwrite command:
+
+```powershell
+python scripts/verify_repo_integrity.py --repo . --json integrity-before.json
+python scripts/recover_local_modules.py --source 'C:\\PATH\\TO\\ORIGINAL\\SKYED' --repo . --report recovery-preview.json
+# Only after source path and provenance verified:
+python scripts/recover_local_modules.py --source 'C:\\PATH\\TO\\ORIGINAL\\SKYED' --repo . --apply --report recovery-applied.json
+python scripts/verify_repo_integrity.py --repo . --json integrity-after.json
+```
+
+Recovery is **not completed**: neither this GitHub checkout, current project uploads nor available GitHub releases contain the authentic missing modules. After a genuine recovery package is returned, inspect all files for credentials, compatibility and unintended personal information before creating a source-only commit. No production WordPress update, DNS change, or automation deployment is authorized.
