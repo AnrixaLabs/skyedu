@@ -52,6 +52,18 @@ Commit recovered source to the same branch after manual review. Never commit `.e
 6. Existing misleading teacher vocabulary coverage warning removed from public child pages; report coverage computed consistently in pipeline.
 7. Kindergarten audio-first package builder is additive and NOT wired into live renderer yet.
 8. Scheduler foundation exists on branch, but no scheduler service is configured or deployed.
+9. `--publish-status draft` supports staged WordPress review; default remains `publish` for existing workflows.
+10. CI validates PHP, packages a review-only plugin ZIP, runs 11 isolated regression tests, and intentionally rejects release while 12 project modules remain absent.
+
+## Tested GitHub evidence (2026-10-19)
+
+- Draft PR: https://github.com/AnrixaLabs/skyedu/pull/3
+- Run: https://github.com/AnrixaLabs/skyedu/actions/runs/39259281197
+- Python syntax: PASS.
+- WordPress renderer PHP lint: PASS.
+- Pure helper regression tests: 11/11 PASS (isolated, not application bootstrap).
+- Review-only WordPress plugin ZIP: built and archived, NOT approved for installation.
+- Complete source-tree gate: FAIL, exactly 12 missing original modules. This is the intended deploy blocker.
 
 ## Release gates
 
