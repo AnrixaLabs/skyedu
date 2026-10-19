@@ -70,8 +70,8 @@ try {
     } catch {
         throw "Git returned an invalid checkout root: $GitTop"
     }
-    $ExpectedRoot = [System.IO.Path]::GetFullPath($RepoRoot).TrimEnd([char[]]@('\\', '/'))
-    $ReportedRoot = [System.IO.Path]::GetFullPath($ResolvedGitTop).TrimEnd([char[]]@('\\', '/'))
+    $ExpectedRoot = [System.IO.Path]::GetFullPath($RepoRoot).TrimEnd([char]92, [char]47)
+    $ReportedRoot = [System.IO.Path]::GetFullPath($ResolvedGitTop).TrimEnd([char]92, [char]47)
     if (-not [string]::Equals($ExpectedRoot, $ReportedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
         throw "Wrong repository root. Expected=$ExpectedRoot GitReported=$ReportedRoot"
     }
