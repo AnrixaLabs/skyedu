@@ -33,7 +33,7 @@ jobs:
         run: |
           $tokens = $null
           $errors = $null
-          foreach ($scriptName in @('Find-SkyED-Original-Source-v2.0.4.ps1', 'Run-SkyED-Offline-QA-v2.0.8.ps1')) {
+          foreach ($scriptName in @('Find-SkyED-Original-Source-v2.0.4.ps1', 'Run-SkyED-Offline-QA-v2.0.8.ps1', 'Start-SkyED-Media-QA-v2.1.0.ps1')) {
             $tokens = $null
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile(
@@ -54,7 +54,7 @@ jobs:
           name: skyed-renderer-v0.4.6-review-not-approved-for-production
           path: SkyED-Lesson-Renderer-v0.4.6-REVIEW.zip
           if-no-files-found: ignore
-      - name: Pure-Python regression tests
+      - name: Pure-Python regression tests including QA evidence safety
         run: python scripts/run_pure_tests.py
       - name: Install minimum offline generator runtime
         run: python -m pip install 'python-dotenv>=1,<2' 'requests>=2.31,<3' 'Pillow>=10,<13' 'numpy>=1.26,<3'
