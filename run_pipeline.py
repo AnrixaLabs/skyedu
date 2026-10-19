@@ -21,6 +21,7 @@ from skyed.cards import generate_vocab_cards, slugify as card_slugify
 from skyed.tts_edge import generate_audio, generate_long_audio_variants, generate_word_audio_set
 from skyed.quizgen import generate_quiz, normalize_theme_variant
 from skyed.wp import upload_media, create_post, ensure_page_path, next_sequential_slug, assert_slug_available
+from skyed.publish_gates import validate_destination, validate_local_media, validate_remote_payload
 from skyed.tag_gamegen import export_tag_s_touch_listen_cards
 from skyed.pipeline_helpers import (
     log_step as _log_step,
@@ -520,6 +521,15 @@ def main() -> None:
 
     if not (wp_base and wp_user and wp_pass):
         raise RuntimeError("Missing WP_BASE_URL / WP_USER / WP_APP_PASSWORD in .env")
+    # Fail closed BEFORE WordPress uploads or any other remote modification.
+    validate_destination(wp_base, os.getenv("SKYED_EXPECTED_WP_HOST", "skyed.org"))
+    local_preflight = validate_local_media(
+        lesson_root, spec,
+        card_stem=card_slugify,
+        sentence_stem=_sentence_audio_stem,
+        page_kind=page_kind,
+    )
+    _log_step(f"[PREFLIGHT] local_media=PASS assets={local_preflight['required_assets']}")
 
     is_page_publish = (wp_post_type or "page").strip().lower() in ("page", "pages")
     if wp_group_path and not is_page_publish:
@@ -652,6 +662,13 @@ def main() -> None:
             }
         )
 
+    # Even before generating shortcode payloads, reject incomplete WP media maps.
+    validate_remote_payload({
+        "page_kind": page_kind,
+        "vocab": items_remote,
+        "sentences": sent_remote,
+    })
+
     def map_block_audio(block: Dict) -> Dict:
         if not isinstance(block, dict):
             return {}
@@ -780,6 +797,12 @@ def main() -> None:
                 "publish_rel_path": publish_rel_path,
             },
         }
+
+        # Verify rewritten quiz audio/images before uploading payload or page.
+        validate_remote_payload(payload, original_quiz=json.loads(
+            (lesson_root / "quiz.json").read_text(encoding="utf-8")
+        ) if (lesson_root / "quiz.json").exists() else {})
+        _log_step("[PREFLIGHT] remote_payload=PASS")
 
         payload_path = lesson_root / "lesson_payload.txt"
         payload_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
