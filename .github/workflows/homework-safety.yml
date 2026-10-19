@@ -64,6 +64,17 @@ jobs:
             smoke-report.json
             generator-cli-help.txt
           if-no-files-found: ignore
+      - name: Full unittest suite with genuine package imports
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests -v 2>&1 | tee full-tests.log
+      - name: Preserve real import regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyed-real-import-unit-tests
+          path: full-tests.log
+          if-no-files-found: ignore
       - name: Verify required project modules exist (release blocker)
         if: always()
         run: python scripts/verify_repo_integrity.py --repo . --json integrity-report.json
