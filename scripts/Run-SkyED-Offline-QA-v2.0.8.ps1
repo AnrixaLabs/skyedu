@@ -42,10 +42,19 @@ function Check-Exit([string]$Label, [int]$Code) {
     $Results.checks[$Label] = if ($Code -eq 0) { 'PASS' } else { "FAIL ($Code)" }
     if ($Code -ne 0) { throw "$Label exited $Code" }
 }
-function Run-Python([string]$Label, [string[]]$Args, [string]$LogName) {
+function Run-Python([string]$Label, [string[]]$CommandArgs, [string]$LogName) {
     $path = Join-Path $Evidence $LogName
-    & $script:Python @Args 2>&1 | Out-File -LiteralPath $path -Encoding UTF8
-    Check-Exit $Label $LASTEXITCODE
+    # Native Python writes test output to stderr even when tests pass.
+    # PS 5.1 can turn native stderr into terminating errors when preference=Stop.
+    $previousPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        & $script:Python @CommandArgs *> $path
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    Check-Exit $Label $code
 }
 try {
     Write-Host '============================================================'
@@ -97,8 +106,15 @@ try {
         $Packages = @('python-dotenv>=1,<2', 'requests>=2.31,<3', 'Pillow>=10,<13', 'numpy>=1.26,<3')
         $PipLog = Join-Path $Evidence 'dependencies.log'
         # Preserve pip errors in the evidence instead of discarding them.
-        & $script:Python -m pip install @Packages > $PipLog 2>&1
-        Check-Exit 'minimum_dependencies' $LASTEXITCODE
+        $previousPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Continue'
+            & $script:Python -m pip install @Packages *> $PipLog
+            $pipExit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $previousPreference
+        }
+        Check-Exit 'minimum_dependencies' $pipExit
     } else {
         $Results.checks.minimum_dependencies = 'SKIPPED_BY_USER'
     }
