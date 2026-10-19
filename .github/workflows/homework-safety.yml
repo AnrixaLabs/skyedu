@@ -23,6 +23,16 @@ jobs:
           python-version: '3.11'
       - name: Python syntax check
         run: python -m compileall -q skyed scripts run_pipeline.py pyside_gui.py tests
+      - name: Windows recovery script PowerShell syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path scripts/Find-SkyED-Original-Source-v2.0.4.ps1),
+            [ref]$tokens, [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
       - name: PHP plugin lint (when PHP CLI available)
         run: |
           if command -v php >/dev/null; then php -l wp_plugin/skyed-lesson-renderer/skyed-lesson-renderer.php; else echo 'PHP CLI missing — release must be reviewed manually'; exit 1; fi
