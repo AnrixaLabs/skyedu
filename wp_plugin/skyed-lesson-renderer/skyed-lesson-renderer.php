@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SkyEd Lesson Renderer Next
  * Description: Renders SkyEd-generated lesson payload data (cards + audio + practice) via shortcode.
- * Version: 0.4.5
+ * Version: 0.4.6
  * Author: Sky Education
  */
 
@@ -71,7 +71,7 @@ class SkyEd_Lesson_Renderer {
             self::CSS_HANDLE,
             plugins_url('assets/skyed-lesson.css', __FILE__),
             [],
-            '0.4.5'
+            '0.4.6'
         );
         wp_enqueue_style(self::CSS_HANDLE);
     }
@@ -662,7 +662,8 @@ class SkyEd_Lesson_Renderer {
         $count_q      = count($practice_questions);
         $unused_vocab = isset($consistency['vocab_not_seen_in_sentences']) && is_array($consistency['vocab_not_seen_in_sentences']) ? $consistency['vocab_not_seen_in_sentences'] : [];
         $warnings = [];
-        if (!empty($unused_vocab)) {
+        // Teacher-only diagnostic: keep incorrect/irrelevant coverage hints off child pages.
+        if (!empty($unused_vocab) && defined('SKYED_SHOW_TEACHER_WARNINGS') && SKYED_SHOW_TEACHER_WARNINGS) {
             $warnings[] = 'Not yet used in sentences: ' . implode(', ', array_map('esc_html', $unused_vocab));
         }
 
