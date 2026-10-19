@@ -77,7 +77,7 @@ def generate_kids_homework(
         activities.append({"type": "listen_and_choose", "questions": questions})
 
     sentences = []
-    for raw in spec.get("sentences", []):
+    for raw in ((spec.get("sentences", []) or [])[:max_sentences] if max_sentences else []):
         text = raw.strip() if isinstance(raw, str) else str(raw.get("en") or "").strip() if isinstance(raw, dict) else ""
         if text:
             sentences.append({
