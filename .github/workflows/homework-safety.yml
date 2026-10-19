@@ -27,8 +27,9 @@ jobs:
         run: |
           if command -v php >/dev/null; then php -l wp_plugin/skyed-lesson-renderer/skyed-lesson-renderer.php; else echo 'PHP CLI missing — release must be reviewed manually'; exit 1; fi
       - name: Pure-Python regression tests
-        run: python -m unittest discover -s tests -v
+        run: python scripts/run_pure_tests.py
       - name: Verify required project modules exist (release blocker)
+        if: always()
         run: python scripts/verify_repo_integrity.py --repo . --json integrity-report.json
       - name: Upload integrity evidence
         if: always()
