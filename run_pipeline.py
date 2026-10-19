@@ -21,7 +21,7 @@ from skyed.cards import generate_vocab_cards, slugify as card_slugify
 from skyed.tts_edge import generate_audio, generate_long_audio_variants, generate_word_audio_set
 from skyed.quizgen import generate_quiz, normalize_theme_variant
 from skyed.wp import upload_media, create_post, ensure_page_path, next_sequential_slug, assert_slug_available
-from skyed.publish_gates import validate_destination, validate_local_media, validate_remote_payload
+from skyed.publish_gates import validate_destination, validate_local_media, validate_remote_payload, validate_image_source_quality
 from skyed.lesson_consistency import correct_consistency_report
 from skyed.tag_gamegen import export_tag_s_touch_listen_cards
 from skyed.pipeline_helpers import (
@@ -533,6 +533,8 @@ def main() -> None:
         page_kind=page_kind,
     )
     _log_step(f"[PREFLIGHT] local_media=PASS assets={local_preflight['required_assets']}")
+    image_quality_gate = validate_image_source_quality(lesson_root, spec, page_kind=page_kind)
+    _log_step(f"[PREFLIGHT] image_sources=PASS count={image_quality_gate['checked']} teacher_review=REQUIRED")
 
     is_page_publish = (wp_post_type or "page").strip().lower() in ("page", "pages")
     if wp_group_path and not is_page_publish:
