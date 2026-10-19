@@ -11,6 +11,11 @@ on:
       - '.github/workflows/homework-safety.yml'
   workflow_dispatch:
 
+# Supersede obsolete queued runs when a PR receives further corrections.
+concurrency:
+  group: homework-safety-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify-homework:
     runs-on: ubuntu-latest
