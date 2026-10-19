@@ -57,9 +57,25 @@ try {
         & git clone --branch $ExpectedBranch --single-branch --depth 1 $RepoUrl $RepoRoot
         Check-Exit 'git_clone' $LASTEXITCODE
     }
-    $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
-    $Top = (& git -C $RepoRoot rev-parse --show-toplevel).Trim()
-    if ($LASTEXITCODE -ne 0 -or $Top -ne $RepoRoot) { throw "Invalid repository root: $RepoRoot" }
+    $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot -ErrorAction Stop).ProviderPath
+    $GitTopLines = @(& git -C $RepoRoot rev-parse --show-toplevel)
+    if ($LASTEXITCODE -ne 0 -or $GitTopLines.Count -ne 1) {
+        throw "Git failed to determine checkout root: $RepoRoot"
+    }
+    # Git for Windows emits C:/... while Resolve-Path emits C:\\... .
+    # Compare *resolved filesystem paths*, case-insensitively, not raw strings.
+    $GitTop = [string]$GitTopLines[0]
+    try {
+        $ResolvedGitTop = (Resolve-Path -LiteralPath $GitTop -ErrorAction Stop).ProviderPath
+    } catch {
+        throw "Git returned an invalid checkout root: $GitTop"
+    }
+    $ExpectedRoot = [System.IO.Path]::GetFullPath($RepoRoot).TrimEnd([char[]]@('\\', '/'))
+    $ReportedRoot = [System.IO.Path]::GetFullPath($ResolvedGitTop).TrimEnd([char[]]@('\\', '/'))
+    if (-not [string]::Equals($ExpectedRoot, $ReportedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Wrong repository root. Expected=$ExpectedRoot GitReported=$ReportedRoot"
+    }
+    $Results.checks.git_root = 'PASS'
     $CurrentBranch = (& git -C $RepoRoot branch --show-current).Trim()
     if ($CurrentBranch -ne $ExpectedBranch) {
         throw "Wrong branch $CurrentBranch, expected $ExpectedBranch"
@@ -79,7 +95,9 @@ try {
     if (-not (Test-Path -LiteralPath $script:Python)) { throw 'Virtualenv Python not found.' }
     if (-not $SkipDependencyInstallation) {
         $Packages = @('python-dotenv>=1,<2', 'requests>=2.31,<3', 'Pillow>=10,<13', 'numpy>=1.26,<3')
-        & $script:Python -m pip install @Packages *> $null
+        $PipLog = Join-Path $Evidence 'dependencies.log'
+        # Preserve pip errors in the evidence instead of discarding them.
+        & $script:Python -m pip install @Packages > $PipLog 2>&1
         Check-Exit 'minimum_dependencies' $LASTEXITCODE
     } else {
         $Results.checks.minimum_dependencies = 'SKIPPED_BY_USER'
