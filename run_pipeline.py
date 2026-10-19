@@ -131,6 +131,7 @@ def main() -> None:
     ap.add_argument("--ocr-device", default=os.getenv("SKYED_OCR_DEVICE", "cpu"), choices=["cpu", "cuda"], help="OCR device hint for picture_reader mode.")
     ap.add_argument("--lesson_title", default=None)
     ap.add_argument("--publish", action="store_true", help="If set, upload to WordPress and create post/page")
+    ap.add_argument("--publish-status", default=os.getenv("WP_PUBLISH_STATUS", "publish"), choices=["draft", "publish"], help="Create a WordPress draft first for review, or publish directly.")
     ap.add_argument("--publish-only", action="store_true", help="Publish from existing output folder (no generation)")
     ap.add_argument("--dry-run", action="store_true", help="Skip image+audio generation (debug/validation)")
     ap.add_argument("--publish_slug", default=None, help="Custom short permalink slug for WordPress publishing")
@@ -175,6 +176,7 @@ def main() -> None:
     wp_user = os.getenv("WP_USER", "").strip()
     wp_pass = os.getenv("WP_APP_PASSWORD", "").strip()
     wp_post_type = os.getenv("WP_POST_TYPE", "page").strip()  # page works normally in your setup
+    publish_status = args.publish_status
     wp_render_mode = (os.getenv("WP_RENDER_MODE", "shortcode") or "shortcode").strip().lower()
     default_theme = "fun_mission" if ((args.page_kind or "lesson").strip().lower() == "picture_reader") else "sky"
     lesson_theme = normalize_theme_variant((args.theme or os.getenv("WP_LESSON_THEME", default_theme) or default_theme).strip().lower())
@@ -745,7 +747,7 @@ def main() -> None:
             title=title,
             html=html_out,
             post_type=wp_post_type,
-            status="publish",
+            status=publish_status,
             content_mode="html_block",
             slug=publish_slug,
             parent=parent_page_id if is_page_publish else None,
@@ -828,12 +830,13 @@ def main() -> None:
             title=title,
             html=shortcode,
             post_type=wp_post_type,
-            status="publish",
+            status=publish_status,
             content_mode="shortcode_block",
             slug=publish_slug,
             parent=parent_page_id if is_page_publish else None,
         )
         _log_step(f"[TIME] create_post={perf_counter() - t_create_post:.2f}s")
+    _log_step(f"Publish status: {publish_status}")
     _log_step(f"Publish slug: {publish_slug}")
     _log_step("Published post:")
     if isinstance(post, dict):
