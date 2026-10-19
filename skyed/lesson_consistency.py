@@ -38,5 +38,18 @@ def unused_vocabulary(spec: dict[str, Any]) -> list[str]:
 
 def correct_consistency_report(spec: dict[str, Any], existing: dict[str, Any] | None) -> dict[str, Any]:
     report = dict(existing or {})
-    report["vocab_not_seen_in_sentences"] = unused_vocabulary(spec)
+    unused = unused_vocabulary(spec)
+    unused_normalized = {" ".join(word.casefold().split()) for word in unused}
+    vocab_words = [
+        str(item.get("en") or "").strip()
+        for item in spec.get("vocab", []) or []
+        if isinstance(item, dict) and str(item.get("en") or "").strip()
+    ]
+    used = [
+        word for word in vocab_words
+        if " ".join(word.casefold().split()) not in unused_normalized
+    ]
+    report["vocab_seen_in_sentences"] = used
+    report["vocab_not_seen_in_sentences"] = unused
+    report["coverage_ratio"] = round(len(used) / max(1, len(vocab_words)), 3)
     return report
