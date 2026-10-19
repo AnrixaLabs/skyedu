@@ -22,6 +22,7 @@ from skyed.tts_edge import generate_audio, generate_long_audio_variants, generat
 from skyed.quizgen import generate_quiz, normalize_theme_variant
 from skyed.wp import upload_media, create_post, ensure_page_path, next_sequential_slug, assert_slug_available
 from skyed.publish_gates import validate_destination, validate_local_media, validate_remote_payload
+from skyed.lesson_consistency import correct_consistency_report
 from skyed.tag_gamegen import export_tag_s_touch_listen_cards
 from skyed.pipeline_helpers import (
     log_step as _log_step,
@@ -622,7 +623,7 @@ def main() -> None:
             audio_count += 1
         _log_step(f"[TIME] upload_audio={perf_counter() - t_upload_audio:.2f}s count={audio_count}")
 
-    consistency_report = _build_consistency_report(spec)
+    consistency_report = correct_consistency_report(spec, _build_consistency_report(spec))
     try:
         (lesson_root / "consistency_report.json").write_text(json.dumps(consistency_report, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
