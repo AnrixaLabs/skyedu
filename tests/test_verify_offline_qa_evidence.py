@@ -50,6 +50,21 @@ class OfflineQAArchiveVerificationTests(unittest.TestCase):
             self.assertEqual(report["theme_count"], 4)
             self.assertEqual(report["php_lint"], "UNVERIFIED")
 
+    def test_legacy_windows_powershell_utf16_log(self):
+        with tempfile.TemporaryDirectory() as d:
+            original = self._write(Path(d))
+            changed = Path(d) / "utf16.zip"
+            with zipfile.ZipFile(original) as source, zipfile.ZipFile(changed, "w") as target:
+                for member in source.infolist():
+                    body = source.read(member.filename)
+                    if member.filename == "unit-tests.log":
+                        body = body.decode("utf-8").encode("utf-16")
+                    target.writestr(member.filename, body)
+            verified = _v.verify(changed)
+            self.assertEqual(verified["status"], "PASS")
+            self.assertEqual(verified["unit_test_count"], 20)
+            self.assertEqual(verified["test_log_encoding"], "utf-16")
+
     def test_blocked_early_windows_qa_not_masked(self):
         with tempfile.TemporaryDirectory() as d:
             report = _v.verify(self._write(Path(d), result_status="BLOCKED"))
