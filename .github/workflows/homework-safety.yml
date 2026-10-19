@@ -94,3 +94,33 @@ jobs:
           name: skyed-homework-integrity
           path: integrity-report.json
           if-no-files-found: ignore
+
+  verify-windows-homework:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact PR branch (not detached merge HEAD)
+        uses: actions/checkout@v4
+        with:
+          ref: feature/homework-automation-v2
+      - name: Install Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exercise Windows path check and real offline QA
+        shell: pwsh
+        env:
+          SKYED_QA_REPO: ${{ github.workspace }}
+          SKYED_QA_TMP: ${{ runner.temp }}
+        run: |
+          $RunRoot = Join-Path $env:SKYED_QA_TMP 'SkyED-Windows-QA'
+          & '.\scripts\Run-SkyED-Offline-QA-v2.0.8.ps1' -RepoRoot $env:SKYED_QA_REPO -ReportRoot $RunRoot
+          if ($LASTEXITCODE -ne 0) { throw "SkyED Windows offline QA failed; inspect uploaded evidence" }
+      - name: Preserve Windows QA evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyed-windows-offline-qa-evidence
+          path: ${{ runner.temp }}/SkyED-Windows-QA/SkyED-Offline-QA-Evidence.zip
+          if-no-files-found: warn
