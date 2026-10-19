@@ -44,17 +44,14 @@ function Check-Exit([string]$Label, [int]$Code) {
 }
 function Run-Python([string]$Label, [string[]]$CommandArgs, [string]$LogName) {
     $path = Join-Path $Evidence $LogName
-    # Native Python writes test output to stderr even when tests pass.
-    # PS 5.1 can turn native stderr into terminating errors when preference=Stop.
-    $previousPreference = $ErrorActionPreference
-    try {
-        $ErrorActionPreference = 'Continue'
-        & $script:Python @CommandArgs *> $path
-        $code = $LASTEXITCODE
-    } finally {
-        $ErrorActionPreference = $previousPreference
+    # Python owns both stdout+stderr and writes a clean UTF-8 evidence file.
+    # Avoid NativeCommandError and UTF-16 Out-File under Windows PowerShell 5.1.
+    $capture = Join-Path $RepoRoot 'scripts\qa_capture.py'
+    if (-not (Test-Path -LiteralPath $capture -PathType Leaf)) {
+        throw "Missing QA subprocess capture helper: $capture"
     }
-    Check-Exit $Label $code
+    & $script:Python $capture --log $path --timeout 900 -- @CommandArgs
+    Check-Exit $Label $LASTEXITCODE
 }
 try {
     Write-Host '============================================================'
@@ -107,16 +104,9 @@ try {
     if (-not $SkipDependencyInstallation) {
         $Packages = @('python-dotenv>=1,<2', 'requests>=2.31,<3', 'Pillow>=10,<13', 'numpy>=1.26,<3')
         $PipLog = Join-Path $Evidence 'dependencies.log'
-        # Preserve pip errors in the evidence instead of discarding them.
-        $previousPreference = $ErrorActionPreference
-        try {
-            $ErrorActionPreference = 'Continue'
-            & $script:Python -m pip install @Packages *> $PipLog
-            $pipExit = $LASTEXITCODE
-        } finally {
-            $ErrorActionPreference = $previousPreference
-        }
-        Check-Exit 'minimum_dependencies' $pipExit
+        $capture = Join-Path $RepoRoot 'scripts\qa_capture.py'
+        & $script:Python $capture --log $PipLog --timeout 1800 -- -m pip install @Packages
+        Check-Exit 'minimum_dependencies' $LASTEXITCODE
     } else {
         $Results.checks.minimum_dependencies = 'SKIPPED_BY_USER'
     }
