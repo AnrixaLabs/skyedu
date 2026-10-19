@@ -18,6 +18,8 @@ class SkyEd_Lesson_Renderer {
     public static function init() : void {
         add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_assets']);
         add_shortcode(self::SHORTCODE, [__CLASS__, 'shortcode']);
+        // Compatible with NG publishing path emitted by run_pipeline.py.
+        add_shortcode('skyed_ng_lesson', [__CLASS__, 'shortcode']);
         add_filter('body_class', [__CLASS__, 'body_class']);
         add_filter('upload_mimes', [__CLASS__, 'allow_payload_mimes'], 10, 2);
         add_filter('wp_check_filetype_and_ext', [__CLASS__, 'fix_payload_filetype'], 10, 5);
@@ -49,7 +51,7 @@ class SkyEd_Lesson_Renderer {
             return $classes;
         }
         global $post;
-        if ($post && isset($post->post_content) && has_shortcode((string)$post->post_content, self::SHORTCODE)) {
+        if ($post && isset($post->post_content) && (has_shortcode((string)$post->post_content, self::SHORTCODE) || has_shortcode((string)$post->post_content, 'skyed_ng_lesson'))) {
             $classes[] = 'skyed-lesson-page';
         }
         return $classes;
@@ -60,7 +62,7 @@ class SkyEd_Lesson_Renderer {
             return false;
         }
         global $post;
-        return (bool)($post && isset($post->post_content) && has_shortcode((string)$post->post_content, self::SHORTCODE));
+        return (bool)($post && isset($post->post_content) && (has_shortcode((string)$post->post_content, self::SHORTCODE) || has_shortcode((string)$post->post_content, 'skyed_ng_lesson')));
     }
 
     public static function enqueue_assets() : void {
