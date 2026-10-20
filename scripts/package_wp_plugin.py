@@ -17,7 +17,7 @@ from zipfile import ZipFile, ZIP_DEFLATED
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument("--repo", type=Path, default=Path("."))
-    p.add_argument("--output", type=Path, default=Path("SkyED-Lesson-Renderer-v0.4.6.zip"))
+    p.add_argument("--output", type=Path, default=Path("SkyED-Lesson-Renderer-v0.4.7.zip"))
     args = p.parse_args()
     plugin = args.repo.resolve() / "wp_plugin" / "skyed-lesson-renderer"
     mainfile = plugin / "skyed-lesson-renderer.php"
@@ -25,8 +25,8 @@ def main() -> int:
     if not mainfile.is_file() or not css.is_file():
         print("BLOCKED: plugin PHP/CSS source is incomplete", file=sys.stderr)
         return 2
-    if "Version: 0.4.6" not in mainfile.read_text(encoding="utf-8"):
-        print("BLOCKED: expected v0.4.6 not found", file=sys.stderr)
+    if "Version: 0.4.7" not in mainfile.read_text(encoding="utf-8"):
+        print("BLOCKED: expected v0.4.7 not found", file=sys.stderr)
         return 2
     php = shutil.which("php")
     if not php:
