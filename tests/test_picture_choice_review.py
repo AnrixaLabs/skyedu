@@ -5,6 +5,7 @@ from datetime import date
 import hashlib
 import json
 from pathlib import Path
+from unittest.mock import patch
 import tempfile
 import unittest
 
@@ -47,7 +48,7 @@ class PictureChoiceReviewTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             r = Path(d)
             self.fixture(r)
-            with self.assertRaisesRegex(PublishGateError, "teacher"):
+            with self.assertRaisesRegex(PublishGateError, "provenance"):
                 validate_picture_choice_review(r)
 
     def test_review_with_picture_labels_blocks(self):
@@ -68,6 +69,44 @@ class PictureChoiceReviewTests(unittest.TestCase):
             result = validate_picture_choice_review(r)
             self.assertEqual(result["status"], "PASS")
             self.assertEqual(result["images_checked"], 2)
+
+    def test_interim_existing_library_allowed_without_extra_manifest(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = Path(d)
+            self.fixture(r)
+            (r / "cards/image_report.json").write_text(json.dumps([
+                {"word": "cat", "slug": "cat", "status": "local_asset_match"},
+                {"word": "dog", "slug": "dog", "status": "local_asset_match"},
+            ]), encoding="utf-8")
+            with patch.dict("os.environ", {"SKYED_REQUIRE_LABEL_FREE_REVIEW": "0"}):
+                result = validate_picture_choice_review(r)
+            self.assertEqual(result["status"], "INTERIM_ASSET_LIBRARY")
+            self.assertEqual(result["images_checked"], 2)
+            self.assertEqual(result["teacher_visual_review"], "RECOMMENDED_INTERIM")
+
+    def test_strict_opt_in_requires_explicit_review_even_for_library(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = Path(d)
+            self.fixture(r)
+            (r / "cards/image_report.json").write_text(json.dumps([
+                {"word": "cat", "slug": "cat", "status": "local_asset_match"},
+                {"word": "dog", "slug": "dog", "status": "local_asset_match"},
+            ]), encoding="utf-8")
+            with patch.dict("os.environ", {"SKYED_REQUIRE_LABEL_FREE_REVIEW": "1"}):
+                with self.assertRaisesRegex(PublishGateError, "teacher"):
+                    validate_picture_choice_review(r)
+
+    def test_interim_rejects_placeholder_and_generated_untested_picture(self):
+        with tempfile.TemporaryDirectory() as d:
+            r = Path(d)
+            self.fixture(r)
+            (r / "cards/image_report.json").write_text(json.dumps([
+                {"word": "cat", "slug": "cat", "status": "local_asset_match"},
+                {"word": "dog", "slug": "dog", "status": "clean_placeholder"},
+            ]), encoding="utf-8")
+            with patch.dict("os.environ", {"SKYED_REQUIRE_LABEL_FREE_REVIEW": "0"}):
+                with self.assertRaisesRegex(PublishGateError, "local_asset_match"):
+                    validate_picture_choice_review(r)
 
     def test_non_picture_quiz_does_not_require_review(self):
         with tempfile.TemporaryDirectory() as d:
