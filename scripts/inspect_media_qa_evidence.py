@@ -90,6 +90,9 @@ def analyze(path: Path, expected_sha256: str = "") -> dict:
             elif missing or bad or not files:
                 report["status"] = "BLOCKED_MEDIA_EVIDENCE"
                 report["reason"] = "Media evidence absent, corrupt or unverified"
+            elif counts[".png"] != 4 or counts[".mp3"] != 12:
+                report["status"] = "BLOCKED_INCOMPLETE_MEDIA"
+                report["reason"] = f"Expected 4 images and 12 clips; verified {counts['.png']} and {counts['.mp3']}"
             elif report["generator_failures"]:
                 report["status"] = "BLOCKED_MEDIA_VALIDATION"
                 report["reason"] = "See generator_failures for exact reasons"
