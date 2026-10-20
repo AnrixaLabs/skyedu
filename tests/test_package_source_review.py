@@ -30,6 +30,8 @@ class SourceReviewArchiveTests(unittest.TestCase):
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_bytes(body)
             subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+            subprocess.run(["git", "-C", str(repo), "checkout", "-qb",
+                            "feature/homework-automation-v2"], check=True)
             subprocess.run(["git", "-C", str(repo), "add", "-f", "."], check=True)
             subprocess.run(["git", "-C", str(repo), "-c", "user.email=test@example.com",
                             "-c", "user.name=QA", "commit", "-qm", "Fixture"], check=True)
