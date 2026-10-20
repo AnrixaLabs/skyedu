@@ -146,6 +146,84 @@ def validate_image_source_quality(lesson_root: Path, spec: Dict[str, Any], page_
     return {"status": "PASS", "checked": len(words), "teacher_visual_review": "REQUIRED"}
 
 
+
+def validate_picture_choice_review(lesson_root: Path) -> Dict[str, Any]:
+    """Fail closed for listening quizzes until final picture choices are human-reviewed.
+
+    A signed-off manifest is bound to the exact final quiz card bytes. The
+    labels must NOT appear in pictures used for listen-and-identify tasks.
+    This check intentionally does not apply to nonpicture quizzes.
+    """
+    import hashlib
+    from datetime import date
+
+    root = Path(lesson_root).resolve()
+    try:
+        quiz = json.loads((root / "quiz.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError, UnicodeError) as exc:
+        raise PublishGateError("Picture-quiz data missing/invalid for label-free review") from exc
+    questions = quiz.get("questions") or []
+    picture = [q for q in questions if isinstance(q, dict) and
+               q.get("kind") == "listen_to_picture"]
+    if not picture:
+        return {"status": "NOT_REQUIRED", "images_checked": 0}
+
+    required = set()
+    for q in picture:
+        if not q.get("prompt_audio"):
+            raise PublishGateError("Picture quiz missing audio prompt")
+        for choice in q.get("choices") or []:
+            if not isinstance(choice, dict):
+                raise PublishGateError("Picture quiz must use image choices")
+            raw = str(choice.get("img") or "").strip()
+            if not raw.startswith("cards/") or not raw.endswith(".png"):
+                raise PublishGateError(f"Unsafe picture choice path: {raw}")
+            rel = Path(raw)
+            if ".." in rel.parts or rel.is_absolute():
+                raise PublishGateError(f"Unsafe picture choice path: {raw}")
+            required.add(rel.as_posix())
+
+    try:
+        review = json.loads((root / "picture_choice_review.json").read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise PublishGateError(
+            "Picture quiz publication blocked until a teacher has inspected the "
+            "label-free final image choices and saved picture_choice_review.json"
+        ) from exc
+    if (review.get("schema") != "skyed.picture-choice-review.v1" or
+        review.get("label_free_confirmed") is not True or
+        review.get("meaning_confirmed") is not True or
+        not str(review.get("reviewer") or "").strip()):
+        raise PublishGateError("Picture-quiz teacher review is incomplete")
+    try:
+        stamp = date.fromisoformat(str(review.get("reviewed_date") or ""))
+        if stamp > date.today():
+            raise ValueError("Future teacher review date")
+    except ValueError as exc:
+        raise PublishGateError("Invalid picture-quiz review date") from exc
+    reviewed_files = review.get("images")
+    if not isinstance(reviewed_files, list) or len(reviewed_files) != len(required):
+        raise PublishGateError("Picture-quiz image review coverage differs from quiz")
+    indexed = {
+        str(x.get("path") or ""): x for x in reviewed_files if isinstance(x, dict)
+    }
+    if set(indexed) != required:
+        raise PublishGateError("Picture-quiz reviewed image paths differ from quiz")
+    for rel in sorted(required):
+        item = indexed[rel]
+        p = (root / rel).resolve()
+        if not p.is_relative_to(root) or not p.is_file():
+            raise PublishGateError(f"Reviewed picture missing: {rel}")
+        expected = str(item.get("sha256") or "").strip().lower()
+        current = hashlib.sha256(p.read_bytes()).hexdigest()
+        if (expected != current or item.get("label_free") is not True or
+            item.get("meaning_correct") is not True):
+            raise PublishGateError(f"Picture review missing, not label-free or stale: {rel}")
+    return {"status": "PASS", "images_checked": len(required),
+            "reviewed_date": stamp.isoformat(), "human_review": "EXPLICIT"}
+
+
+
 def _check_url(url: str, context: str, failures: List[str]) -> None:
     u = urlsplit(str(url or "").strip())
     if (u.scheme.lower() != "https" or not u.hostname
