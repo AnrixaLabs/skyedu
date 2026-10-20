@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SkyEd Lesson Renderer Next
  * Description: Renders SkyEd-generated lesson payload data (cards + audio + practice) via shortcode.
- * Version: 0.4.6
+ * Version: 0.4.7
  * Author: Sky Education
  */
 
@@ -877,7 +877,7 @@ class SkyEd_Lesson_Renderer {
                       if (ch.img) {
                         const im = document.createElement('img');
                         im.src = ch.img;
-                        im.alt = ch.text || ('choice ' + (ci + 1));
+                        im.alt = rendererMode === 'kid_single' ? ('Picture option ' + (ci + 1)) : (ch.text || ('choice ' + (ci + 1)));
                         inner.appendChild(im);
                       }
 
@@ -904,9 +904,14 @@ class SkyEd_Lesson_Renderer {
                       }
 
                       choiceBtn.appendChild(inner);
+                      choiceBtn.setAttribute('aria-label', rendererMode === 'kid_single' ? ('Picture option ' + (ci + 1)) : (ch.text || ('Option ' + (ci + 1))));
                       choiceBtn.onclick = () => {
-                        answers[idx] = ci;
                         const expected = Number(q.answer_index);
+                        if (rendererMode === 'kid_single' && ci !== expected) {
+                          delete answers[idx];
+                        } else {
+                          answers[idx] = ci;
+                        }
                         [...choicesWrap.querySelectorAll('.skyed-choice')].forEach(x => x.classList.remove('active','wrong','correct'));
                         choiceBtn.classList.add('active');
                         updateProgress();
@@ -1015,6 +1020,12 @@ class SkyEd_Lesson_Renderer {
                     resetBtn.textContent = 'Start mission again';
                   }
                   btn.onclick = () => {
+                    const completed = questions.reduce((count, q, idx) => count + ((idx in answers) ? 1 : 0), 0);
+                    if (resultEl) resultEl.setAttribute('role', 'status');
+                    if (rendererMode === 'kid_single' && completed < questions.length) {
+                      if (resultEl) resultEl.textContent = 'Finish all rounds to see your score. ' + completed + ' of ' + questions.length + ' finished.';
+                      return;
+                    }
                     let score = 0;
                     questions.forEach((q, idx) => {
                       if (Number(answers[idx]) === Number(q.answer_index)) score += 1;
