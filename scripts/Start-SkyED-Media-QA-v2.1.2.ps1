@@ -129,8 +129,8 @@ try {
             $ActualStatus = [string]$Manifest.result.status
             if ($ActualStatus) {
                 $Report.status = $ActualStatus
-                $Report.visual_blockers_count = @($Manifest.result.visual_quality_blockers).Count
-                $Report.media_checked_count = @($Manifest.files).Count
+                $Report.visual_blockers_count = @($Manifest.result.visual_quality_blockers | Where-Object { $null -ne $_ }).Count
+                $Report.media_checked_count = @($Manifest.files | Where-Object { $null -ne $_ }).Count
                 $Report.generator_exit_code = $Manifest.result.generator_exit_code
                 Write-Host "MEDIA_QA_GENERATOR_STATUS=$ActualStatus"
                 Write-Host "MEDIA_QA_MEDIA_FILES=$($Report.media_checked_count)"
@@ -149,6 +149,10 @@ try {
     }
     if ($Exit -ne 0 -and $Report.status -eq 'TECHNICAL_MEDIA_PASS') {
         $Report.status = 'BLOCKED_EXIT_MISMATCH'
+    }
+    if ($Exit -eq 0 -and $Report.status -ne 'TECHNICAL_MEDIA_PASS') {
+        # A success code must never override a failed safety gate.
+        $Exit = 2
     }
 }
 catch {
