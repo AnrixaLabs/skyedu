@@ -156,7 +156,10 @@ def _resolve_existing_library_picture(root: Path, target: str) -> Optional[Path]
     outside the library and records for other types or vocabulary targets.
     Legacy loose files remain the fallback for installations without an index.
     """
-    root = Path(root).resolve()
+    # Keep the caller's lexical Windows path (including possible 8.3 aliases)
+    # for returned paths; resolve only for security containment checks.
+    root = Path(root)
+    resolved_root = root.resolve()
     target_key = normalize_target(target)
     if not target_key or target_key == "item":
         return None
@@ -165,8 +168,8 @@ def _resolve_existing_library_picture(root: Path, target: str) -> Optional[Path]
         if (not rec.approved or str(rec.asset_type).strip().lower() != "vocabulary"
             or normalize_target(rec.target) != target_key):
             continue
-        candidate = (root / rec.image_relpath).resolve()
-        if (not candidate.is_relative_to(root) or not candidate.is_file()
+        candidate = root / rec.image_relpath
+        if (not candidate.resolve().is_relative_to(resolved_root) or not candidate.is_file()
             or candidate.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp", ".bmp")):
             continue
         indexed.append((rec.asset_id, candidate))
@@ -176,7 +179,7 @@ def _resolve_existing_library_picture(root: Path, target: str) -> Optional[Path]
     loose = find_loose_file_asset(root, target=target)
     # Preserve pre-existing production behavior: Pictures/Flashcards take
     # priority when present; approved indexed records fill legacy gaps.
-    if loose is not None and loose.is_file() and loose.resolve().is_relative_to(root):
+    if loose is not None and loose.is_file() and loose.resolve().is_relative_to(resolved_root):
         return loose
     if len(indexed) == 1:
         return indexed[0][1]
