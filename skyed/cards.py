@@ -184,7 +184,7 @@ def make_flashcard(
     d.rounded_rectangle((28, 30, 996, 730), radius=30,
                         fill=(255, 255, 255), outline=(213, 226, 237), width=3)
     d.rounded_rectangle((28, 30, 996, 49), radius=9, fill=(9, 176, 207))
-    d.text((60, 91), "SKYED  /  VOCABULARY", font=_load_font(29, font_path), fill=cyan)
+    d.text((60, 91), "SKYED / WORDS", font=_load_font(29, font_path), fill=cyan)
 
     word = str(en or "").strip()
     translation = str(zh or "").strip()
