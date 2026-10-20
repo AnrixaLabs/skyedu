@@ -174,10 +174,12 @@ def _resolve_existing_library_picture(root: Path, target: str) -> Optional[Path]
     # same word without a lesson-specific selection. Use the proven loose
     # library path where available; otherwise choose a stable sorted record.
     loose = find_loose_file_asset(root, target=target)
-    if len(indexed) == 1:
-        return indexed[0][1]
+    # Preserve pre-existing production behavior: Pictures/Flashcards take
+    # priority when present; approved indexed records fill legacy gaps.
     if loose is not None and loose.is_file() and loose.resolve().is_relative_to(root):
         return loose
+    if len(indexed) == 1:
+        return indexed[0][1]
     if indexed:
         return sorted(indexed, key=lambda item: (item[0], str(item[1])))[0][1]
     return None
