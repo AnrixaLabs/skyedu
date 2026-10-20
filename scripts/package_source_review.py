@@ -49,6 +49,12 @@ def package(repo: Path, output: Path) -> dict:
         included.append((name, actual))
     sha = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"],
                                   text=True).strip()
+    actual_branch = subprocess.check_output(
+        ["git", "-C", str(repo), "branch", "--show-current"], text=True).strip()
+    if actual_branch != "feature/homework-automation-v2":
+        raise ValueError(
+            f"Review snapshot must come from feature/homework-automation-v2, not {actual_branch or 'detached HEAD'}"
+        )
     metadata = {
         "schema": "skyed.review.source.v2.1.6",
         "origin": "AnrixaLabs/skyedu",
