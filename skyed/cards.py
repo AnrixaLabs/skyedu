@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 import json
 
 from .image_backends import ImageGenRequest, backend_from_env
-from .asset_library import default_asset_library_root, find_loose_file_asset
+from .asset_library import default_asset_library_root, find_loose_file_asset, load_index, normalize_target
 from .prompt_templates import normalize_style
 from .image_specs import ImageSpec, build_specs_from_parsed_spec
 from .image_validation import ImageValidator
@@ -148,18 +148,53 @@ def _local_asset_library_root() -> Path:
     return default_asset_library_root(project_root)
 
 
+def _resolve_existing_library_picture(root: Path, target: str) -> Optional[Path]:
+    """Reuse an approved *exact-target* indexed image, then legacy Pictures/Flashcards.
+
+    The library index already belongs to SkyED; do not introduce a new image
+    database or attempt to generate substitute artwork. Refuse index paths
+    outside the library and records for other types or vocabulary targets.
+    Legacy loose files remain the fallback for installations without an index.
+    """
+    root = Path(root).resolve()
+    target_key = normalize_target(target)
+    if not target_key or target_key == "item":
+        return None
+    indexed = []
+    for rec in load_index(root):
+        if (not rec.approved or str(rec.asset_type).strip().lower() != "vocabulary"
+            or normalize_target(rec.target) != target_key):
+            continue
+        candidate = (root / rec.image_relpath).resolve()
+        if (not candidate.is_relative_to(root) or not candidate.is_file()
+            or candidate.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp", ".bmp")):
+            continue
+        indexed.append((rec.asset_id, candidate))
+    # Never silently choose between different indexed illustrations for the
+    # same word without a lesson-specific selection. Use the proven loose
+    # library path where available; otherwise choose a stable sorted record.
+    loose = find_loose_file_asset(root, target=target)
+    if len(indexed) == 1:
+        return indexed[0][1]
+    if loose is not None and loose.is_file() and loose.resolve().is_relative_to(root):
+        return loose
+    if indexed:
+        return sorted(indexed, key=lambda item: (item[0], str(item[1])))[0][1]
+    return None
+
+
 def _materialize_local_asset_png(target: str, out_path: Path) -> Optional[Path]:
     root = _local_asset_library_root()
-    match = find_loose_file_asset(root, target=target)
-    if match is None or not match.exists():
+    match = _resolve_existing_library_picture(root, target)
+    if match is None:
         return None
     try:
-        img = Image.open(match).convert("RGB")
+        with Image.open(match) as source:
+            img = source.convert("RGB")
         _save_png_optimized(img, out_path)
         return match
-    except Exception:
+    except (OSError, ValueError):
         return None
-
 
 def make_flashcard(
     en: str,
