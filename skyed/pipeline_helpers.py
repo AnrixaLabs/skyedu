@@ -268,7 +268,7 @@ def build_lesson_html(
       <div class="grid">
         {"".join(vocab_cards)}
       </div>
-      <div class="note">Keep practice 5–10 minutes. Audio optional.</div>
+      <div class="note">{"This is a listening task: play the sound before choosing each picture." if normalize_theme_variant(theme) == "sky_tiles" else "Keep practice 5–10 minutes. Audio optional."}</div>
 
       <div class="h3">Sentences</div>
       <div class="sentwrap">
