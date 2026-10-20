@@ -47,6 +47,14 @@ jobs:
           if command -v php >/dev/null; then php -l wp_plugin/skyed-lesson-renderer/skyed-lesson-renderer.php; else echo 'PHP CLI missing — release must be reviewed manually'; exit 1; fi
       - name: Build review-only WordPress plugin ZIP
         run: python scripts/package_wp_plugin.py --repo . --output SkyED-Lesson-Renderer-v0.4.7-REVIEW.zip
+      - name: Package complete development source without bundled fonts
+        run: python scripts/package_source_review.py --repo . --output SkyED-Homework-DevSource-v2.1.6-REVIEW.zip
+      - name: Upload verified source-only review snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyed-homework-development-source-v2.1.6
+          path: SkyED-Homework-DevSource-v2.1.6-REVIEW.zip
+          if-no-files-found: error
       - name: Upload review-only WordPress plugin ZIP
         if: always()
         uses: actions/upload-artifact@v4
