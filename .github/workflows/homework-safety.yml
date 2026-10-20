@@ -50,12 +50,12 @@ jobs:
       - name: Build review-only WordPress plugin ZIP
         run: python scripts/package_wp_plugin.py --repo . --output SkyED-Lesson-Renderer-v0.4.7-REVIEW.zip
       - name: Package complete development source without bundled fonts
-        run: python scripts/package_source_review.py --repo . --output SkyED-Homework-DevSource-v2.1.6-REVIEW.zip
+        run: python scripts/package_source_review.py --repo . --output SkyED-Homework-DevSource-v2.1.7-REVIEW.zip
       - name: Upload verified source-only review snapshot
         uses: actions/upload-artifact@v4
         with:
-          name: skyed-homework-development-source-v2.1.6
-          path: SkyED-Homework-DevSource-v2.1.6-REVIEW.zip
+          name: skyed-homework-development-source-v2.1.7
+          path: SkyED-Homework-DevSource-v2.1.7-REVIEW.zip
           if-no-files-found: error
       - name: Upload review-only WordPress plugin ZIP
         if: always()
@@ -64,10 +64,10 @@ jobs:
           name: skyed-renderer-v0.4.7-review-not-approved-for-production
           path: SkyED-Lesson-Renderer-v0.4.7-REVIEW.zip
           if-no-files-found: ignore
-      - name: Pure-Python regression tests including QA evidence safety
-        run: python scripts/run_pure_tests.py
-      - name: Install minimum offline generator runtime
+      - name: Install minimum offline generator and image-test runtime
         run: python -m pip install 'python-dotenv>=1,<2' 'requests>=2.31,<3' 'Pillow>=10,<13' 'numpy>=1.26,<3'
+      - name: Full regression suite including existing asset database tests
+        run: python scripts/run_pure_tests.py
       - name: Import real generator and inspect CLI
         run: |
           python -c "import skyed; import run_pipeline; print('REAL_GENERATOR_IMPORT=PASS')"
