@@ -56,7 +56,7 @@ def package(repo: Path, output: Path) -> dict:
             f"Review snapshot must come from feature/homework-automation-v2, not {actual_branch or 'detached HEAD'}"
         )
     metadata = {
-        "schema": "skyed.review.source.v2.1.6",
+        "schema": "skyed.review.source.v2.1.7",
         "origin": "AnrixaLabs/skyedu",
         "branch": "feature/homework-automation-v2",
         "commit": sha,
