@@ -50,6 +50,20 @@ class ExistingAssetDatabaseTests(unittest.TestCase):
             Image.new("RGB", (240, 240)).save(source)
             self.assertEqual(_resolve_existing_library_picture(root, "living room"), source)
 
+    def test_existing_pictures_take_priority_over_index(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "assets"
+            rec = make_record(root=root, asset_type="vocabulary", visual_class="single_object",
+                              target="cat", pos="noun")
+            indexed = root / rec.image_relpath
+            indexed.parent.mkdir(parents=True, exist_ok=True)
+            Image.new("RGB", (200, 200), (255, 0, 0)).save(indexed)
+            save_index(root, [rec])
+            original = root / "Pictures/cat.png"
+            original.parent.mkdir(exist_ok=True)
+            Image.new("RGB", (250, 250), (0, 255, 0)).save(original)
+            self.assertEqual(_resolve_existing_library_picture(root, "cat"), original)
+
     def test_index_path_traversal_cannot_escape_library(self):
         with tempfile.TemporaryDirectory() as temp:
             parent = Path(temp)
