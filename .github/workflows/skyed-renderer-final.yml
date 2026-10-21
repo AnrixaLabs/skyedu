@@ -34,12 +34,12 @@ jobs:
           mkdir -p dist
           cp scripts/finish_skyed_renderer_v225.py dist/
           cp scripts/skyed_renderer_remote_v225.sh dist/
-          cp scripts/Complete-SkyED-Release-v2.2.25.ps1 dist/
+          cp scripts/Complete-SkyED-Release-v2.2.25.ps1 dist/Complete-SkyED-Release-v2.2.26.ps1
           test "$(find dist -type f | wc -l)" -eq 3
           echo MINIMAL_BUILD=PASS
       - uses: actions/upload-artifact@v4
         with:
-          name: SkyED-Final-Renderer-v2.2.25
+          name: SkyED-Final-Renderer-v2.2.26
           path: dist/
           if-no-files-found: error
   windows-script-parse:
