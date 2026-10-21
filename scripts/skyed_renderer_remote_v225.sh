@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SkyED v2.2.25: renderer-only deploy/rollback. Never edits posts, DB or media.
+# SkyED v2.2.26: renderer-only deploy/rollback. Never edits posts, DB or media.
 set -Eeuo pipefail
 umask 077
 ROOT=/var/www/skyed.org
@@ -68,6 +68,11 @@ inspect)
   echo PREFIX=wpml_
   echo "PHP_SHA256=$CURRENT"
   if fpm_ok; then echo FPM=PASS; else echo FPM=FAIL; fi
+  if [[ -f "$RUN/COMMITTED" ]]; then echo TRANSACTION_STATE=COMMITTED
+  elif [[ -f "$RUN/ROLLED_BACK" ]]; then echo TRANSACTION_STATE=ROLLED_BACK
+  elif [[ -f "$RUN/PENDING" ]]; then echo TRANSACTION_STATE=PENDING
+  elif [[ -d "$RUN" ]]; then echo TRANSACTION_STATE=PRE_SWAP
+  else echo TRANSACTION_STATE=NONE; fi
   if [[ "$CURRENT" == "$OLD" ]]; then echo STATUS=INSTALLED_V047
   elif [[ "$CURRENT" == "$NEW" ]]; then echo STATUS=INSTALLED_V048
   else echo STATUS=UNKNOWN_PLUGIN_HASH; exit 13; fi
@@ -94,15 +99,23 @@ deploy)
   find "$STAGED" -type f -exec chmod "$(stat -c %a "$PHP")" {} +
   chmod "$(stat -c %a "$PLUGIN/assets")" "$STAGED/assets"
   chmod "$(stat -c %a "$PLUGIN/assets/skyed-lesson.css")" "$STAGED/assets/skyed-lesson.css"
-  runuser -u www-data -- test -r "$STAGED/skyed-lesson-renderer.php" || fail STAGED_FPM
-  runuser -u www-data -- test -r "$STAGED/assets/skyed-lesson.css" || fail STAGED_CSS
+  # The transaction directory is intentionally private (0700). Test FPM
+  # readability from an actual web-worker-traversable staging location.
+  # Never loosen the private backup directory's permissions.
+  PUBLIC_STAGE="$ROOT/wp-content/.skyed-renderer-stage-$ID"
+  [[ ! -e "$PUBLIC_STAGE" && ! -L "$PUBLIC_STAGE" ]] || fail PUBLIC_STAGE_ALREADY_EXISTS
+  cp -a "$STAGED" "$PUBLIC_STAGE"
+  [[ ! -L "$PUBLIC_STAGE" && "$(hash_file "$PUBLIC_STAGE/skyed-lesson-renderer.php")" == "$NEW" ]] || fail PUBLIC_STAGE_HASH
+  runuser -u www-data -- test -x "$PUBLIC_STAGE" || fail STAGED_FPM_TRAVERSE
+  runuser -u www-data -- test -r "$PUBLIC_STAGE/skyed-lesson-renderer.php" || fail STAGED_FPM
+  runuser -u www-data -- test -r "$PUBLIC_STAGE/assets/skyed-lesson.css" || fail STAGED_CSS
   cp -a "$0" "$RUN/watchdog.sh"
   chmod 700 "$RUN/watchdog.sh"
   touch "$RUN/PENDING"
   nohup bash "$RUN/watchdog.sh" watchdog "$ID" > "$RUN/watchdog.log" 2>&1 </dev/null 9>&- &
   echo WATCHDOG=ARMED
   mv "$PLUGIN" "$RUN/original"
-  if ! mv "$STAGED" "$PLUGIN"; then
+  if ! mv "$PUBLIC_STAGE" "$PLUGIN"; then
     mv "$RUN/original" "$PLUGIN" || true
     echo STATUS=SWAP_UNCONFIRMED
     exit 23
