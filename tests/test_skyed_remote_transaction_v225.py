@@ -16,6 +16,7 @@ def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+@unittest.skipUnless(os.name == "posix", "POSIX-only Bash transaction simulation")
 class RemoteTransactionTests(unittest.TestCase):
     def setUp(self):
         self.scratch = tempfile.TemporaryDirectory(prefix="skyed-v225-sim-")
