@@ -1,4 +1,4 @@
-# SkyED renderer v2.2.25 — minimal Windows PowerShell 5.1 launcher.
+# SkyED renderer v2.2.26 — minimal Windows PowerShell 5.1 launcher.
 # Requires the existing Stage G browser virtual environment (Playwright + Edge).
 [CmdletBinding()]
 param(
@@ -30,5 +30,5 @@ if (-not [string]::IsNullOrWhiteSpace($CandidateZip)) {
 & $Engine @Arguments
 $Result = $LASTEXITCODE
 if ($Result -ne 0) {
-    throw "SkyED final controller exited with code $Result; inspect SkyED-Final-Release-v2.2.25-*.json in Downloads."
+    throw "SkyED final controller exited with code $Result; inspect SkyED-Final-Release-v2.2.26-*.json in Downloads."
 }
