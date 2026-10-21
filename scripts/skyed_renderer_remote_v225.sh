@@ -99,7 +99,7 @@ deploy)
   cp -a "$0" "$RUN/watchdog.sh"
   chmod 700 "$RUN/watchdog.sh"
   touch "$RUN/PENDING"
-  nohup bash "$RUN/watchdog.sh" watchdog "$ID" > "$RUN/watchdog.log" 2>&1 </dev/null &
+  nohup bash "$RUN/watchdog.sh" watchdog "$ID" > "$RUN/watchdog.log" 2>&1 </dev/null 9>&- &
   echo WATCHDOG=ARMED
   mv "$PLUGIN" "$RUN/original"
   if ! mv "$STAGED" "$PLUGIN"; then
