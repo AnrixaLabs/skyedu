@@ -8,6 +8,7 @@ on:
       - scripts/skyed_renderer_remote_v225.sh
       - scripts/Complete-SkyED-Release-v2.2.25.ps1
       - tests/test_finish_skyed_release_v225.py
+      - tests/test_skyed_remote_transaction_v225.py
       - .github/workflows/skyed-renderer-final.yml
   workflow_dispatch:
 
@@ -24,10 +25,10 @@ jobs:
           python-version: '3.11'
       - name: Validate Python and remote Bash
         run: |
-          python -m py_compile scripts/finish_skyed_renderer_v225.py tests/test_finish_skyed_release_v225.py
+          python -m py_compile scripts/finish_skyed_renderer_v225.py tests/test_finish_skyed_release_v225.py tests/test_skyed_remote_transaction_v225.py
           bash -n scripts/skyed_renderer_remote_v225.sh
       - name: Execute focused regression tests
-        run: python -m unittest discover -s tests -p 'test_finish_skyed_release_v225.py' -v
+        run: python -m unittest discover -s tests -p 'test_*v225.py' -v
       - name: Package only the final executable files
         run: |
           mkdir -p dist
