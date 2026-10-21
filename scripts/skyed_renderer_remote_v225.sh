@@ -104,6 +104,14 @@ deploy)
   # Never loosen the private backup directory's permissions.
   PUBLIC_STAGE="$ROOT/wp-content/.skyed-renderer-stage-$ID"
   [[ ! -e "$PUBLIC_STAGE" && ! -L "$PUBLIC_STAGE" ]] || fail PUBLIC_STAGE_ALREADY_EXISTS
+  # Remove only our own incomplete staging directory on any pre-swap exit.
+  cleanup_stage() {
+    if [[ -d "$PUBLIC_STAGE" && ! -L "$PUBLIC_STAGE" &&
+          "$PUBLIC_STAGE" == "$ROOT/wp-content/.skyed-renderer-stage-$ID" ]]; then
+      rm -rf -- "$PUBLIC_STAGE"
+    fi
+  }
+  trap cleanup_stage EXIT
   cp -a "$STAGED" "$PUBLIC_STAGE"
   [[ ! -L "$PUBLIC_STAGE" && "$(hash_file "$PUBLIC_STAGE/skyed-lesson-renderer.php")" == "$NEW" ]] || fail PUBLIC_STAGE_HASH
   runuser -u www-data -- test -x "$PUBLIC_STAGE" || fail STAGED_FPM_TRAVERSE
