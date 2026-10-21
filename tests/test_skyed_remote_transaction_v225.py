@@ -63,7 +63,7 @@ class RemoteTransactionTests(unittest.TestCase):
         text = re.sub(r"(?m)^OLD=[a-f0-9]{64}$", "OLD=" + digest(self.original), text)
         text = re.sub(r"(?m)^NEW=[a-f0-9]{64}$", "NEW=" + digest(self.new), text)
         text = re.sub(r"(?m)^ZIPHASH=[a-f0-9]{64}$", "ZIPHASH=" + digest(archive.read_bytes()), text)
-        text = text.replace("sleep 720", "sleep 3")
+        text = text.replace("sleep 720", "sleep 30")
         text = text.replace('INPUT="/tmp/skyed-v225-$ID.zip"',
                             'INPUT="' + str(self.tmp) + '/skyed-v225-$ID.zip"')
         self.script = self.tmp / "simulated-release.sh"
