@@ -8,6 +8,7 @@ No remote credentials are accepted as arguments or stored.
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import hashlib
 import json
 import re
@@ -144,10 +145,10 @@ def check_images(baseline: dict, current: dict) -> None:
         a, b = old["images"], new["images"]
         if b["count"] < a["count"] or b["practice_count"] < a["practice_count"]:
             raise ReleaseFailure(f"{key}: images disappeared after upgrade")
-        known = {(x["id"], x["inside"]) for x in a["defects"]}
-        new_bad = {(x["id"], x["inside"]) for x in b["defects"]}
-        if not new_bad.issubset(known):
-            raise ReleaseFailure(f"{key}: new/moved broken images after upgrade")
+        known = Counter((x["id"], x["inside"]) for x in a["defects"])
+        new_bad = Counter((x["id"], x["inside"]) for x in b["defects"])
+        if any(count > known[identity] for identity, count in new_bad.items()):
+            raise ReleaseFailure(f"{key}: additional/moved broken images after upgrade")
 
 
 def exercise_quiz(browser, lesson: str, run_id: str) -> None:
