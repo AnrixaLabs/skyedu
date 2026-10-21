@@ -243,6 +243,7 @@ def main() -> int:
     script_path = Path(__file__).with_name("skyed_renderer_remote_v225.sh")
     remote_script = f"/tmp/skyed-v225-{run_id}.sh"
     swapped = False
+    deployment_attempted = False
     committed = False
     try:
         if not script_path.is_file():
@@ -270,6 +271,7 @@ def main() -> int:
         candidate = find_candidate(args.candidate)
         execute(["scp", "-q", "-o", "StrictHostKeyChecking=yes", str(candidate),
                  f"{HOST}:/tmp/skyed-v225-{run_id}.zip"])
+        deployment_attempted = True
         installed = remote(remote_script, "deploy", run_id)
         report["steps"].append({"deploy": installed})
         if installed.get("STATUS") != "PENDING_BROWSER_COMMIT":
@@ -291,11 +293,15 @@ def main() -> int:
         return 0
     except Exception as exc:
         report["error"] = f"{type(exc).__name__}: {exc}"
-        if swapped and not committed:
+        if (swapped or deployment_attempted) and not committed:
+            # An SSH disconnect can occur after the server swap. Never assume no write.
             try:
-                rollback = remote(remote_script, "rollback", run_id, must_succeed=False)
+                before = remote(remote_script, "inspect", run_id, must_succeed=False)
+                if before.get("STATUS") == "INSTALLED_V048":
+                    rollback = remote(remote_script, "rollback", run_id, must_succeed=False)
+                    report["steps"].append({"rollback_attempt": rollback})
                 final = remote(remote_script, "inspect", run_id, must_succeed=False)
-                report["steps"].append({"rollback": rollback, "after_rollback": final})
+                report["steps"].append({"after_failure": final})
                 report["status"] = ("ROLLED_BACK_V047_VERIFIED"
                                     if final.get("STATUS") == "INSTALLED_V047" and
                                        final.get("FPM") == "PASS" else "UNCONFIRMED_STOP")
