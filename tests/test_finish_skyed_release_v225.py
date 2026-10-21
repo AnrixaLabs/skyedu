@@ -45,6 +45,11 @@ class ReleaseContractTests(unittest.TestCase):
         with self.assertRaises(ReleaseFailure):
             check_images(self.fixture([original]), self.fixture([original, new]))
 
+    def test_duplicate_of_existing_broken_image_blocks(self):
+        old = {"id": "same", "inside": True, "pending": False}
+        with self.assertRaises(ReleaseFailure):
+            check_images(self.fixture([old]), self.fixture([old, old]))
+
     def test_moved_fault_into_practice_blocks(self):
         old = {"id": "same", "inside": False, "pending": False}
         new = {"id": "same", "inside": True, "pending": False}
