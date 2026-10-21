@@ -40,7 +40,7 @@ class RemoteTransactionTests(unittest.TestCase):
         self.bin.mkdir()
         stubs = {
             "wp": "#!/bin/sh\ncase \"$*\" in *'config get DB_NAME'*) echo skyed_org;; *'db prefix'*) echo wpml_;; *) exit 4;; esac\n",
-            "runuser": "#!/bin/sh\nwhile [ \"$1\" != '--' ]; do shift; done\nshift\nexec \"$@\"\n",
+            "runuser": "#!/bin/sh\nwhile [ \"$1\" != '--' ]; do shift; done\nshift\ncase \"$3\" in \"$SKYED_TEST_PRIVATE_BASE\"/*) exit 1;; esac\nif [ \"$SKYED_TEST_DENY_STAGED\" = 1 ]; then case \"$3\" in *'.skyed-renderer-stage-'*) exit 1;; esac; fi\nexec \"$@\"\n",
             "id": "#!/bin/sh\nif [ \"$1\" = -u ] && [ \"$2\" = www-data ]; then echo 33; else /usr/bin/id \"$@\"; fi\n",
             "curl": "#!/bin/sh\nprintf '<html><div class=\"skyed-lesson skyed-practice\"></div></html>'\n",
             "php": "#!/bin/sh\nexit 0\n",
@@ -51,6 +51,8 @@ class RemoteTransactionTests(unittest.TestCase):
             os.chmod(script, 0o755)
         self.env = dict(os.environ)
         self.env["PATH"] = str(self.bin) + os.pathsep + self.env.get("PATH", "")
+        self.env["SKYED_TEST_PRIVATE_BASE"] = str(self.base)
+        self.env["SKYED_TEST_DENY_STAGED"] = "0"
         archive = self.tmp / "candidate.zip"
         with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
             z.writestr("skyed-lesson-renderer/skyed-lesson-renderer.php", self.new)
@@ -96,6 +98,27 @@ class RemoteTransactionTests(unittest.TestCase):
         self.assertIn("STATUS=RESTORED_V047_VERIFIED", self.call("rollback"))
         self.assertIn("STATUS=INSTALLED_V047", self.call("inspect"))
         self.assertEqual((self.plugin / "skyed-lesson-renderer.php").read_bytes(), self.original)
+
+    def test_candidate_access_is_checked_outside_private_transaction(self):
+        # The mock denies web-worker access beneath the private backup root.
+        self.assertIn("STATUS=PENDING_BROWSER_COMMIT", self.deploy())
+        candidate = self.plugin / "skyed-lesson-renderer.php"
+        self.assertEqual(candidate.read_bytes(), self.new)
+        self.assertFalse((self.root / "wp-content" / (
+            ".skyed-renderer-stage-" + self.run_id)).exists())
+
+    def test_pre_swap_worker_access_block_preserves_original(self):
+        self.env["SKYED_TEST_DENY_STAGED"] = "1"
+        source = self.tmp / f"skyed-v225-{self.run_id}.zip"
+        source.write_bytes(self.archive.read_bytes())
+        result = subprocess.run(["bash", str(self.script), "deploy", self.run_id],
+                                env=self.env, capture_output=True, text=True, timeout=25)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("STATUS=BLOCKED_STAGED_FPM_TRAVERSE", result.stdout)
+        self.assertEqual((self.plugin / "skyed-lesson-renderer.php").read_bytes(),
+                         self.original)
+        self.assertIn("TRANSACTION_STATE=PRE_SWAP", self.call("inspect"))
+        self.assertFalse((self.base / self.run_id / "PENDING").exists())
 
     def test_unknown_plugin_rejected_without_swap(self):
         (self.plugin / "skyed-lesson-renderer.php").write_bytes(b"unexpected administrator edit")
