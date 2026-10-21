@@ -21,6 +21,8 @@ from skyed.cards import generate_vocab_cards, slugify as card_slugify
 from skyed.tts_edge import generate_audio, generate_long_audio_variants, generate_word_audio_set
 from skyed.quizgen import generate_quiz, normalize_theme_variant
 from skyed.wp import upload_media, create_post, ensure_page_path, next_sequential_slug, assert_slug_available
+from skyed.publish_gates import validate_destination, validate_local_media, validate_remote_payload, validate_image_source_quality, validate_picture_choice_review
+from skyed.lesson_consistency import correct_consistency_report
 from skyed.tag_gamegen import export_tag_s_touch_listen_cards
 from skyed.pipeline_helpers import (
     log_step as _log_step,
@@ -129,6 +131,7 @@ def main() -> None:
     ap.add_argument("--ocr-device", default=os.getenv("SKYED_OCR_DEVICE", "cpu"), choices=["cpu", "cuda"], help="OCR device hint for picture_reader mode.")
     ap.add_argument("--lesson_title", default=None)
     ap.add_argument("--publish", action="store_true", help="If set, upload to WordPress and create post/page")
+    ap.add_argument("--publish-status", default=os.getenv("WP_PUBLISH_STATUS", "publish"), choices=["draft", "publish"], help="Create a WordPress draft first for review, or publish directly.")
     ap.add_argument("--publish-only", action="store_true", help="Publish from existing output folder (no generation)")
     ap.add_argument("--dry-run", action="store_true", help="Skip image+audio generation (debug/validation)")
     ap.add_argument("--publish_slug", default=None, help="Custom short permalink slug for WordPress publishing")
@@ -173,6 +176,7 @@ def main() -> None:
     wp_user = os.getenv("WP_USER", "").strip()
     wp_pass = os.getenv("WP_APP_PASSWORD", "").strip()
     wp_post_type = os.getenv("WP_POST_TYPE", "page").strip()  # page works normally in your setup
+    publish_status = args.publish_status
     wp_render_mode = (os.getenv("WP_RENDER_MODE", "shortcode") or "shortcode").strip().lower()
     default_theme = "fun_mission" if ((args.page_kind or "lesson").strip().lower() == "picture_reader") else "sky"
     lesson_theme = normalize_theme_variant((args.theme or os.getenv("WP_LESSON_THEME", default_theme) or default_theme).strip().lower())
@@ -520,6 +524,19 @@ def main() -> None:
 
     if not (wp_base and wp_user and wp_pass):
         raise RuntimeError("Missing WP_BASE_URL / WP_USER / WP_APP_PASSWORD in .env")
+    # Fail closed BEFORE WordPress uploads or any other remote modification.
+    validate_destination(wp_base, os.getenv("SKYED_EXPECTED_WP_HOST", "skyed.org"))
+    local_preflight = validate_local_media(
+        lesson_root, spec,
+        card_stem=card_slugify,
+        sentence_stem=_sentence_audio_stem,
+        page_kind=page_kind,
+    )
+    _log_step(f"[PREFLIGHT] local_media=PASS assets={local_preflight['required_assets']}")
+    image_quality_gate = validate_image_source_quality(lesson_root, spec, page_kind=page_kind)
+    _log_step(f"[PREFLIGHT] image_sources=PASS count={image_quality_gate['checked']} teacher_review=REQUIRED")
+    picture_choice_gate = validate_picture_choice_review(lesson_root)
+    _log_step(f"[PREFLIGHT] picture_choice_review={picture_choice_gate['status']} count={picture_choice_gate['images_checked']}")
 
     is_page_publish = (wp_post_type or "page").strip().lower() in ("page", "pages")
     if wp_group_path and not is_page_publish:
@@ -612,7 +629,7 @@ def main() -> None:
             audio_count += 1
         _log_step(f"[TIME] upload_audio={perf_counter() - t_upload_audio:.2f}s count={audio_count}")
 
-    consistency_report = _build_consistency_report(spec)
+    consistency_report = correct_consistency_report(spec, _build_consistency_report(spec))
     try:
         (lesson_root / "consistency_report.json").write_text(json.dumps(consistency_report, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception:
@@ -651,6 +668,13 @@ def main() -> None:
                 "audio_zh": audio_url_by_rel.get(f"zh/sent_{stem}.mp3", ""),
             }
         )
+
+    # Even before generating shortcode payloads, reject incomplete WP media maps.
+    validate_remote_payload({
+        "page_kind": page_kind,
+        "vocab": items_remote,
+        "sentences": sent_remote,
+    })
 
     def map_block_audio(block: Dict) -> Dict:
         if not isinstance(block, dict):
@@ -727,7 +751,7 @@ def main() -> None:
             title=title,
             html=html_out,
             post_type=wp_post_type,
-            status="publish",
+            status=publish_status,
             content_mode="html_block",
             slug=publish_slug,
             parent=parent_page_id if is_page_publish else None,
@@ -781,6 +805,12 @@ def main() -> None:
             },
         }
 
+        # Verify rewritten quiz audio/images before uploading payload or page.
+        validate_remote_payload(payload, original_quiz=json.loads(
+            (lesson_root / "quiz.json").read_text(encoding="utf-8")
+        ) if (lesson_root / "quiz.json").exists() else {})
+        _log_step("[PREFLIGHT] remote_payload=PASS")
+
         payload_path = lesson_root / "lesson_payload.txt"
         payload_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -804,12 +834,13 @@ def main() -> None:
             title=title,
             html=shortcode,
             post_type=wp_post_type,
-            status="publish",
+            status=publish_status,
             content_mode="shortcode_block",
             slug=publish_slug,
             parent=parent_page_id if is_page_publish else None,
         )
         _log_step(f"[TIME] create_post={perf_counter() - t_create_post:.2f}s")
+    _log_step(f"Publish status: {publish_status}")
     _log_step(f"Publish slug: {publish_slug}")
     _log_step("Published post:")
     if isinstance(post, dict):

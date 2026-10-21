@@ -1,0 +1,136 @@
+name: Homework safety gates
+on:
+  pull_request:
+    paths:
+      - 'run_pipeline.py'
+      - 'skyed/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'wp_plugin/**'
+      - '.env.example'
+      - '.github/workflows/homework-safety.yml'
+  workflow_dispatch:
+
+# Supersede obsolete queued runs when a PR receives further corrections.
+concurrency:
+  group: homework-safety-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-homework:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/homework-automation-v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Python syntax check
+        run: python -m compileall -q skyed scripts run_pipeline.py pyside_gui.py tests
+      - name: Windows recovery script PowerShell syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          foreach ($scriptName in @('Find-SkyED-Original-Source-v2.0.4.ps1', 'Run-SkyED-Offline-QA-v2.0.8.ps1', 'Start-SkyED-Media-QA-v2.1.0.ps1', 'Start-SkyED-Media-QA-v2.1.1.ps1', 'Start-SkyED-Media-QA-v2.1.2.ps1', 'Repair-SkyED-Artwork-v2.1.5.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path (Join-Path scripts $scriptName)),
+              [ref]$tokens, [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          }
+      - name: PHP plugin lint (when PHP CLI available)
+        run: |
+          if command -v php >/dev/null; then php -l wp_plugin/skyed-lesson-renderer/skyed-lesson-renderer.php; else echo 'PHP CLI missing — release must be reviewed manually'; exit 1; fi
+      - name: Build review-only WordPress plugin ZIP
+        run: python scripts/package_wp_plugin.py --repo . --output SkyED-Lesson-Renderer-v0.4.7-REVIEW.zip
+      - name: Package complete development source without bundled fonts
+        run: python scripts/package_source_review.py --repo . --output SkyED-Homework-DevSource-v2.1.7-REVIEW.zip
+      - name: Upload verified source-only review snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyed-homework-development-source-v2.1.7
+          path: SkyED-Homework-DevSource-v2.1.7-REVIEW.zip
+          if-no-files-found: error
+      - name: Upload review-only WordPress plugin ZIP
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyed-renderer-v0.4.7-review-not-approved-for-production
+          path: SkyED-Lesson-Renderer-v0.4.7-REVIEW.zip
+          if-no-files-found: ignore
+      - name: Install minimum offline generator and image-test runtime
+        run: python -m pip install 'python-dotenv>=1,<2' 'requests>=2.31,<3' 'Pillow>=10,<13' 'numpy>=1.26,<3'
+      - name: Full regression suite including existing asset database tests
+        run: python scripts/run_pure_tests.py
+      - name: Import real generator and inspect CLI
+        run: |
+          python -c "import skyed; import run_pipeline; print('REAL_GENERATOR_IMPORT=PASS')"
+          python run_pipeline.py --help > generator-cli-help.txt
+      - name: Rehearse four lesson themes with real pipeline (no media or publishing)
+        run: python scripts/smoke_generator_offline.py --repo . --report smoke-report.json
+      - name: Preserve offline generator evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyed-offline-generator-qa
+          path: |
+            smoke-report.json
+            generator-cli-help.txt
+          if-no-files-found: ignore
+      - name: Full unittest suite with genuine package imports
+        run: |
+          set -o pipefail
+          python -m unittest discover -s tests -v 2>&1 | tee full-tests.log
+      - name: Preserve real import regression evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyed-real-import-unit-tests
+          path: full-tests.log
+          if-no-files-found: ignore
+      - name: Verify required project modules exist (release blocker)
+        if: always()
+        run: python scripts/verify_repo_integrity.py --repo . --json integrity-report.json
+      - name: Upload integrity evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyed-homework-integrity
+          path: integrity-report.json
+          if-no-files-found: ignore
+
+  verify-windows-homework:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout exact PR branch (not detached merge HEAD)
+        uses: actions/checkout@v4
+        with:
+          ref: feature/homework-automation-v2
+      - name: Install Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Exercise Windows path check and real offline QA
+        shell: pwsh
+        env:
+          SKYED_QA_REPO: ${{ github.workspace }}
+          SKYED_QA_TMP: ${{ runner.temp }}
+        run: |
+          $RunRoot = Join-Path $env:SKYED_QA_TMP 'SkyED-Windows-QA'
+          & '.\scripts\Run-SkyED-Offline-QA-v2.0.8.ps1' -RepoRoot $env:SKYED_QA_REPO -ReportRoot $RunRoot
+          if ($LASTEXITCODE -ne 0) { throw "SkyED Windows offline QA failed; inspect uploaded evidence" }
+      - name: Preserve Windows QA evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skyed-windows-offline-qa-evidence
+          path: ${{ runner.temp }}/SkyED-Windows-QA/SkyED-Offline-QA-Evidence.zip
+          if-no-files-found: warn
