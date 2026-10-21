@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""SkyED v2.2.25: one-pass inspection, guarded renderer release and browser QA.
+"""SkyED v2.2.26: one-pass inspection, guarded renderer release and browser QA.
 
 Requires Python 3.9+, OpenSSH/scp and Playwright with Microsoft Edge.
 Run under the existing Stage G browser virtual environment on Windows.
@@ -236,11 +236,11 @@ def main() -> int:
     parser.add_argument("--report-dir", type=Path, default=Path.home() / "Downloads")
     args = parser.parse_args()
     run_id = secrets.token_hex(8)
-    report = {"version": "2.2.25", "transaction": run_id,
+    report = {"version": "2.2.26", "transaction": run_id,
               "at": datetime.now(timezone.utc).isoformat(),
               "site": "https://skyed.org", "status": "STARTED", "steps": []}
     args.report_dir.mkdir(parents=True, exist_ok=True)
-    report_path = args.report_dir / f"SkyED-Final-Release-v2.2.25-{run_id}.json"
+    report_path = args.report_dir / f"SkyED-Final-Release-v2.2.26-{run_id}.json"
     script_path = Path(__file__).with_name("skyed_renderer_remote_v225.sh")
     remote_script = f"/tmp/skyed-v225-{run_id}.sh"
     swapped = False
@@ -295,17 +295,34 @@ def main() -> int:
     except Exception as exc:
         report["error"] = f"{type(exc).__name__}: {exc}"
         if (swapped or deployment_attempted) and not committed:
-            # An SSH disconnect can occur after the server swap. Never assume no write.
+            # A failed SSH command can mean either a pre-swap block or an
+            # interrupted live swap. Confirm both plugin and transaction state.
             try:
                 before = remote(remote_script, "inspect", run_id, must_succeed=False)
-                if before.get("STATUS") == "INSTALLED_V048":
-                    rollback = remote(remote_script, "rollback", run_id, must_succeed=False)
-                    report["steps"].append({"rollback_attempt": rollback})
-                final = remote(remote_script, "inspect", run_id, must_succeed=False)
-                report["steps"].append({"after_failure": final})
-                report["status"] = ("ROLLED_BACK_V047_VERIFIED"
-                                    if final.get("STATUS") == "INSTALLED_V047" and
-                                       final.get("FPM") == "PASS" else "UNCONFIRMED_STOP")
+                report["steps"].append({"after_failure_initial": before})
+                transaction = before.get("TRANSACTION_STATE")
+                installed = before.get("STATUS")
+                if transaction == "COMMITTED":
+                    report["status"] = "COMMITTED_POSTCHECK_REVIEW_REQUIRED"
+                else:
+                    if transaction == "PENDING" and installed == "INSTALLED_V048":
+                        rollback = remote(remote_script, "rollback", run_id, must_succeed=False)
+                        report["steps"].append({"rollback_attempt": rollback})
+                    final = remote(remote_script, "inspect", run_id, must_succeed=False)
+                    report["steps"].append({"after_failure": final})
+                    final_status = final.get("STATUS")
+                    final_transaction = final.get("TRANSACTION_STATE")
+                    if final_status == "INSTALLED_V047" and final.get("FPM") == "PASS":
+                        if final_transaction == "ROLLED_BACK":
+                            report["status"] = "ROLLED_BACK_V047_VERIFIED"
+                        elif final_transaction in ("PRE_SWAP", "NONE"):
+                            report["status"] = "BLOCKED_PRE_SWAP_V047_VERIFIED"
+                        else:
+                            report["status"] = "UNCONFIRMED_STOP"
+                    elif final_transaction == "COMMITTED":
+                        report["status"] = "COMMITTED_POSTCHECK_REVIEW_REQUIRED"
+                    else:
+                        report["status"] = "UNCONFIRMED_STOP"
             except Exception as rollback_error:
                 report["rollback_error"] = type(rollback_error).__name__
                 report["status"] = "UNCONFIRMED_STOP"
