@@ -3,6 +3,10 @@ import hashlib
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
+import json
+import sys
+from scripts import finish_skyed_renderer_v225 as controller
 from scripts.finish_skyed_renderer_v225 import (
     EXPECTED_ZIP, OLD_PHP, NEW_PHP, check_images,
     parse_fields, sha256, ReleaseFailure,
@@ -10,6 +14,34 @@ from scripts.finish_skyed_renderer_v225 import (
 
 
 class ReleaseContractTests(unittest.TestCase):
+    def test_failed_pre_swap_does_not_report_a_rollback(self):
+        inspected = {"STATUS": "INSTALLED_V047", "FPM": "PASS",
+                     "TRANSACTION_STATE": "PRE_SWAP"}
+        calls = [dict(inspected, TRANSACTION_STATE="NONE"),
+                 controller.ReleaseFailure("BLOCKED_STAGED_FPM"), inspected, inspected]
+
+        def fake_remote(*args, **kwargs):
+            next_result = calls.pop(0)
+            if isinstance(next_result, Exception):
+                raise next_result
+            return next_result
+
+        with tempfile.TemporaryDirectory() as temp:
+            report_dir = Path(temp)
+            with (patch.object(sys, "argv",
+                               ["release", "--apply", "--report-dir", str(report_dir)]),
+                  patch.object(controller, "ensure_browser"),
+                  patch.object(controller, "execute", return_value={}),
+                  patch.object(controller, "remote", side_effect=fake_remote),
+                  patch.object(controller, "find_candidate", return_value=Path("pinned.zip")),
+                  patch.object(controller, "live_checks", return_value={})):
+                self.assertEqual(controller.main(), 2)
+            reports = list(report_dir.glob("SkyED-Final-Release-v2.2.26-*.json"))
+            self.assertEqual(len(reports), 1)
+            report = json.loads(reports[0].read_text(encoding="utf-8"))
+            self.assertEqual(report["status"], "BLOCKED_PRE_SWAP_V047_VERIFIED")
+            self.assertEqual(calls, [])
+
     def test_pinned_candidate(self):
         self.assertEqual(len(EXPECTED_ZIP), 64)
         self.assertEqual(len(OLD_PHP), 64)
