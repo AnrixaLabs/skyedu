@@ -30,22 +30,16 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_finish_skyed_release_v225.py' -v
       - name: Package only the final executable files
         run: |
-          python - <<'PY'
-          import pathlib, zipfile
-          files = [
-              "scripts/finish_skyed_renderer_v225.py",
-              "scripts/skyed_renderer_remote_v225.sh",
-              "scripts/Complete-SkyED-Release-v2.2.25.ps1",
-          ]
-          with zipfile.ZipFile("SkyED-Final-Renderer-v2.2.25.zip", "w", zipfile.ZIP_DEFLATED) as archive:
-              for item in files:
-                  archive.write(item, pathlib.Path(item).name)
-          print("MINIMAL_BUILD=PASS")
-          PY
+          mkdir -p dist
+          cp scripts/finish_skyed_renderer_v225.py dist/
+          cp scripts/skyed_renderer_remote_v225.sh dist/
+          cp scripts/Complete-SkyED-Release-v2.2.25.ps1 dist/
+          test "$(find dist -type f | wc -l)" -eq 3
+          echo MINIMAL_BUILD=PASS
       - uses: actions/upload-artifact@v4
         with:
           name: SkyED-Final-Renderer-v2.2.25
-          path: SkyED-Final-Renderer-v2.2.25.zip
+          path: dist/
           if-no-files-found: error
   windows-script-parse:
     runs-on: windows-latest
