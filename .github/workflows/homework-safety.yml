@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          ref: feature/homework-automation-v2
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -110,10 +110,10 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Checkout actual proposed PR commit
+      - name: Checkout exact PR branch (not detached merge HEAD)
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          ref: feature/homework-automation-v2
       - name: Install Python 3.11
         uses: actions/setup-python@v5
         with:
