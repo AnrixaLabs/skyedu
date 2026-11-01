@@ -45,6 +45,10 @@ jobs:
         run: |
           python -m py_compile skyed_control_panel.py skyed_control/__init__.py skyed_control/registry.py scripts/package_control_panel.py
           python -m unittest discover -s tests -p 'test_control_panel_registry.py' -v
+      - name: Install missing headless Qt shared libraries
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libegl1 libgl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0
       - name: Install real Qt desktop runtime
         run: python -m pip install 'PySide6>=6.7,<7'
       - name: Headless Qt creation, navigation and smoke tests
