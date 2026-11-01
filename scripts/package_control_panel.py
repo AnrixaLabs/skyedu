@@ -34,10 +34,20 @@ def package(repo: Path, output: Path) -> dict:
         manifest["files"][name] = hashlib.sha256(raw).hexdigest()
 
     output.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+
+    def store(z: zipfile.ZipFile, name: str, raw: bytes) -> None:
+        # Stable metadata is essential for reproducible source archives.
+        info = zipfile.ZipInfo(name, (2026, 11, 1, 0, 0, 0))
+        info.compress_type = zipfile.ZIP_DEFLATED
+        info.create_system = 3
+        info.external_attr = 0o644 << 16
+        z.writestr(info, raw, compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+
+    with zipfile.ZipFile(output, "w") as z:
         for name in SOURCE_FILES:
-            z.write(repo / name, name)
-        z.writestr("member-sha256.json", json.dumps(manifest, sort_keys=True, indent=2) + "\n")
+            store(z, name, (repo / name).read_bytes())
+        store(z, "member-sha256.json",
+              (json.dumps(manifest, sort_keys=True, indent=2) + "\n").encode("utf-8"))
     with zipfile.ZipFile(output) as z:
         if z.testzip() is not None:
             raise ValueError("ZIP integrity failed")
