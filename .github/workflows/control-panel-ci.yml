@@ -67,6 +67,8 @@ jobs:
         run: |
           python scripts/package_control_panel.py --out dist/SkyED-ControlPanel-v2.2.0.zip
           python -c "import zipfile; p='dist/SkyED-ControlPanel-v2.2.0.zip'; z=zipfile.ZipFile(p); assert z.testzip() is None; assert len(z.namelist()) == 6; print('CONTROL_PANEL_DISTRIBUTION=PASS')"
+          python scripts/package_control_panel.py --out dist/repro-check.zip
+          python -c "from pathlib import Path; import hashlib; a=Path('dist/SkyED-ControlPanel-v2.2.0.zip').read_bytes(); b=Path('dist/repro-check.zip').read_bytes(); assert a == b; print('CONTROL_PANEL_REPRODUCIBLE_SHA256=PASS', hashlib.sha256(a).hexdigest())"
       - name: Publish verified Windows installer artifact
         uses: actions/upload-artifact@v4
         with:
