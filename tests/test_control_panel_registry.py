@@ -44,5 +44,19 @@ class ControlPanelRegistryTest(unittest.TestCase):
             self.assertFalse(next(ok for title, ok, _ in checks if title == "Legacy control panel"))
 
 
+    def test_legacy_ui_tab_names_and_methods_are_still_wired(self):
+        """Guard against accidentally breaking a tile by renaming the classic UI."""
+        import re
+        source = Path(__file__).resolve().parents[1] / "pyside_gui.py"
+        raw = source.read_text(encoding="utf-8")
+        existing_tabs = set(re.findall(r'self\.right_tabs\.addTab\([^\n]+,\s*"([^"]+)"\)', raw))
+        expected_tabs = {task.legacy_tab for task in TASKS if task.route == "legacy"}
+        self.assertTrue(expected_tabs <= existing_tabs, sorted(expected_tabs - existing_tabs))
+        self.assertRegex(raw, r"(?m)^    def open_asset_batcher\(self\)")
+        self.assertRegex(raw, r"(?m)^    def open_card_cutter\(self\)")
+        self.assertRegex(raw, r"(?m)^    def run_pipeline\(self,\s*mode:")
+        self.assertRegex(raw, r"(?m)^    def run_ng_pipeline\(self,\s*mode:")
+
+
 if __name__ == "__main__":
     unittest.main()
