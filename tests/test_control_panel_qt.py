@@ -6,9 +6,14 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 try:
     from PySide6 import QtWidgets
-    from skyed_control_panel import ControlPanel
-except ImportError:
+except ModuleNotFoundError as exc:
+    if exc.name != "PySide6":
+        raise
     QtWidgets = None
+
+if QtWidgets is not None:
+    from skyed_control_panel import ControlPanel
+else:
     ControlPanel = None
 
 
