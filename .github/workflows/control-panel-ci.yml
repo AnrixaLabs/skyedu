@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - feature/control-panel-unified-v2.2.0
+      - feature/control-panel-ci-hardening-v2.2.1
+      - feature/homework-automation-v2
+      - master
+      - main
     paths:
       - 'skyed_control_panel.py'
       - 'skyed_control/**'
@@ -15,6 +19,8 @@ on:
   pull_request:
     branches:
       - feature/homework-automation-v2
+      - master
+      - main
     paths:
       - 'skyed_control_panel.py'
       - 'skyed_control/**'
@@ -29,7 +35,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: skyed-control-panel-ci
+  group: control-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
