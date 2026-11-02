@@ -32,7 +32,22 @@
     $("#idxMax").textContent = String(max);
   }
 
-  function safe(s) { return (s == null) ? "" : String(s); }
+  function safe(s) {
+    // Prompts are interpolated into trusted HTML templates: escape as text.
+    return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;",
+      '"': "&quot;", "'": "&#39;"
+    })[c]);
+  }
+
+  function safeSegment(value) {
+    // Reject path traversal and markup in scene/asset identifiers.
+    const segment = String(value == null ? "" : value);
+    if (!/^[a-zA-Z0-9_-]+$/.test(segment)) {
+      throw new Error("Invalid asset identifier");
+    }
+    return segment;
+  }
 
   // --- renderers ---
   function renderMCQ(host, q, onAnswered) {
@@ -160,6 +175,7 @@
   // --- boot ---
   window.SKYED_BOOT = async function ({ jsonUrl }) {
     const pkg = await fetchJson(jsonUrl);
+    const scene = safeSegment(pkg.scene);
     const host = $("#quizHost");
 
     const quizzes = pkg.quizzes || [];
@@ -175,14 +191,14 @@
     };
 
     // scene zones file is copied to output/assets/scenes/<scene>/zones.json
-    const sceneZones = await fetchJson(`assets/scenes/${pkg.scene}/zones.json`);
+    const sceneZones = await fetchJson(`assets/scenes/${scene}/zones.json`);
 
     function applyTemplate(tpl, q) {
       return tpl
         .replaceAll("{{PROMPT}}", safe(q.prompt))
         .replaceAll("{{PROMPT_ZH}}", safe(q.prompt_zh))
-        .replaceAll("{{SCENE_BG}}", `assets/scenes/${pkg.scene}/${sceneZones.background}`)
-        .replaceAll("{{SPRITE_SRC}}", `assets/scenes/${pkg.scene}/sprites/${safe(q.object_id)}.${sceneZones.sprite_ext}`);
+        .replaceAll("{{SCENE_BG}}", `assets/scenes/${scene}/${safeSegment(sceneZones.background.replace(/\.svg$/i, ""))}.svg`)
+        .replaceAll("{{SPRITE_SRC}}", `assets/scenes/${scene}/sprites/${safeSegment(q.object_id)}.${safeSegment(sceneZones.sprite_ext)}`);
     }
 
     function getZoneRect(zoneId) {
