@@ -50,6 +50,7 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_control_panel_qt.py' -v
           python skyed_control_panel.py --smoke-test
+          python -m unittest discover -s tests -p 'test_lobby_workspace_qt.py' -v
       - name: Full reproducible Windows distribution
         run: |
           python scripts/package_control_panel_v230.py --out dist/SkyED-ControlPanel-Lobby-v2.3.0.zip
@@ -103,3 +104,5 @@ jobs:
           python skyed_control_panel.py --smoke-test
           if ($LASTEXITCODE -ne 0) { throw 'V230_WINDOWS_QT_SMOKE_FAILED' }
           Write-Host 'V230_WINDOWS_QT=PASS'
+          python -m unittest discover -s tests -p 'test_lobby_workspace_qt.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'V230_WINDOWS_NATIVE_LOBBY_FAILED' }
