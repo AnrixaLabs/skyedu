@@ -13,8 +13,9 @@ class ControlPanelRegistryTest(unittest.TestCase):
         self.assertGreaterEqual(len(TASKS), 15)
 
     def test_every_route_is_real(self):
-        valid = {"legacy", "folder", "website", "diagnostics", "settings", "lobby"}
+        valid = {"legacy", "folder", "website", "diagnostics", "settings", "lobby", "integration"}
         self.assertEqual({item.route for item in TASKS}, valid)
+        self.assertEqual(task_by_key("course-integration").route, "integration")
         self.assertEqual(task_by_key("lobby-designer").target, "editor")
         self.assertEqual(task_by_key("lobby-preview").target, "preview")
         self.assertEqual(task_by_key("tags").legacy_tab, "tag_s Creator")
