@@ -78,7 +78,7 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET' || request.mode === 'navigate') return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
-  const safe = PUBLIC.has(url.pathname) || /^\/assets\/[^/]+\.[a-f0-9]{8,}\.(?:js|css)$/.test(url.pathname);
+  const safe = PUBLIC.has(url.pathname) || /^\/assets\/[^/]+-[A-Za-z0-9_-]{8,}\.(?:js|css)$/.test(url.pathname);
   if (!safe) return;
   event.respondWith((async () => {
     const cache = await caches.open(CACHE);
@@ -106,6 +106,7 @@ self.addEventListener('fetch', event => {
     change(root / "src/App.tsx", "Expected GrowthBridge 2.3.0",
            "Expected GrowthBridge 2.3.1")
     change(root / "package.json", '"version": "2.3.0"', '"version": "2.3.1"')
+    change(root / "package.json", '"vite": "6.0.11"', '"vite": "6.4.5"')
     change(root / "README.md", "**Release:** 2.3.0 — Operational Product Release",
            "**Release:** 2.3.1 — Security Hardened Candidate")
     shutil.rmtree(root / "backend/__pycache__", ignore_errors=True)
