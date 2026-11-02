@@ -1,0 +1,14 @@
+{
+  "version": "2.3.1",
+  "milestone": "course-hub-stage-integration",
+  "status": "LOCAL_STAGING_ENGINE_READY_PRODUCTION_NOT_DEPLOYED",
+  "protected_sites": ["skyed.org", "portal.skyed.org", "growth.skyed.org", "anrixa.com", "skyedu.cn"],
+  "source_of_truth": "read-only SFTP copy of /var/www/course.skyed.org/current (host must be verified)",
+  "new_lobby_public_path_in_local_stage": "/lobby-preview/",
+  "requires_capture": true,
+  "requires_lesson_mapping": true,
+  "historical_expected_media": {"mp3": 342, "png": 91, "total": 433},
+  "automatic_publication": false,
+  "production_mutation": false,
+  "reason_not_published": "Unverified existing v1.2.x server content and lesson URLs. No credentials available to authenticate production."
+}

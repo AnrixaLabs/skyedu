@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-Route = Literal["legacy", "folder", "website", "diagnostics", "settings", "lobby"]
+Route = Literal["legacy", "folder", "website", "diagnostics", "settings", "lobby", "integration"]
 _ALLOWED_HOSTS = frozenset({"course.skyed.org", "portal.skyed.org", "growth.skyed.org", "skyed.org"})
 
 
@@ -38,6 +38,7 @@ TASKS: tuple[Task, ...] = (
     Task("publish", "WordPress Publishing", "OPERATE", "Open legacy publishing with existing safety checks.", "legacy", "Publish"),
     Task("lobby-designer", "Lobby Designer", "OPERATE", "Edit curricula, lesson cards, colors and local draft content with Save to workspace.", "lobby", target="editor"),
     Task("lobby-preview", "Lobby Live Preview", "OPERATE", "View the responsive Course Hub lobby using your locally saved content.", "lobby", target="preview"),
+    Task("course-integration", "Course Hub Integration", "OPERATE", "Combine a captured live site with the new tile lobby in a verified, isolated local preview.", "integration"),
     Task("library", "Local Lesson Library", "OPERATE", "Browse existing generated lesson output without altering it.", "folder", target="output"),
     Task("assetlibrary", "Media Library", "OPERATE", "Browse the canonical local asset library, if present.", "folder", target="asset_library"),
     Task("course", "Course Hub", "WEBSITES", "Open the separate Course Hub application.", "website", target="https://course.skyed.org"),
@@ -62,6 +63,8 @@ def validate_catalog() -> None:
             assert task.target in {"output", "asset_library"}
         elif task.route == "lobby":
             assert task.target in {"editor", "preview"} and not task.legacy_tab
+        elif task.route == "integration":
+            assert not task.target and not task.legacy_tab
         elif task.route == "website":
             parsed = urlsplit(task.target)
             assert parsed.scheme == "https" and parsed.hostname in _ALLOWED_HOSTS
@@ -104,6 +107,7 @@ def local_diagnostics(root: Path) -> list[tuple[str, bool, str]]:
         check("Legacy configuration", (root / "gui_config.json").is_file(), "Present (credentials deliberately hidden)" if (root / "gui_config.json").exists() else "Not yet created"),
         check("Lesson input", (root / "homework.txt").is_file(), root / "homework.txt"),
         check("Lobby Designer", (root / "skyed_lobby" / "tools" / "edit-lobby.html").is_file(), root / "skyed_lobby" / "tools" / "edit-lobby.html"),
+        check("Staging integration", (root / "scripts" / "course_hub_integration.py").is_file(), root / "scripts" / "course_hub_integration.py"),
         check("Lobby content", (root / "skyed_lobby" / "site" / "content" / "lobby.json").is_file(), root / "skyed_lobby" / "site" / "content" / "lobby.json"),
         check("Asset library", (root / "asset_library").is_dir(), root / "asset_library"),
         check("Comfy workflow", (root / "assets/comfy/workflow_api.json").is_file(), root / "assets/comfy/workflow_api.json"),
