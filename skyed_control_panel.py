@@ -1,4 +1,4 @@
-"""SkyED Control Panel 2.2 — modern Windows shell over the proven legacy workflows.
+"""SkyED Control Panel 2.3 — modern Windows shell over the proven legacy workflows.
 
 No legacy module is replaced, no production action runs on startup, and no
 credentials are copied into Qt settings or logs. Start with pythonw.exe.
@@ -14,7 +14,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from skyed_control.registry import TASKS, Task, local_diagnostics, searchable, task_by_key
 
 ROOT = Path(__file__).resolve().parent
-APP_VERSION = "2.2.1"
+APP_VERSION = "2.3.0"
 SECTIONS = ("CREATE", "OPERATE", "WEBSITES", "SYSTEM")
 
 
@@ -124,6 +124,7 @@ class ControlPanel(QtWidgets.QMainWindow):
         super().__init__()
         self.root = root.resolve()
         self.legacy = None
+        self.lobby_workspace = None
         self.settings = QtCore.QSettings("SkyEducation", "SkyEdControlPanel")
         self.dark = self.settings.value("appearance/dark", False, bool)
         self.section = "HOME"
@@ -168,7 +169,7 @@ class ControlPanel(QtWidgets.QMainWindow):
         legacy_btn = QtWidgets.QPushButton("Open classic workroom")
         legacy_btn.clicked.connect(lambda: self._open_legacy("Quick"))
         nav_layout.addWidget(legacy_btn)
-        version = QtWidgets.QLabel("Control Panel 2.2.1\nLocal-first · safe navigation")
+        version = QtWidgets.QLabel("Control Panel 2.3.0\nLocal-first · safe navigation")
         version.setObjectName("Muted")
         nav_layout.addWidget(version)
         main.addWidget(sidebar)
@@ -312,6 +313,9 @@ class ControlPanel(QtWidgets.QMainWindow):
 
     def open_task(self, key: str):
         task = task_by_key(key)
+        if task.route == "lobby":
+            self._open_lobby(task.target)
+            return
         if task.route == "legacy":
             legacy = self._open_legacy(task.legacy_tab)
             if legacy and key == "assets":
@@ -339,6 +343,22 @@ class ControlPanel(QtWidgets.QMainWindow):
             self._show_settings()
             return
         raise AssertionError(f"Unknown route: {task.route}")
+
+    def _open_lobby(self, view: str):
+        """Open the actual editor in an embedded native workspace.
+
+        The server starts on an ephemeral loopback port only when requested.
+        """
+        from skyed_control.lobby_workspace import LobbyWorkspace
+        if self.lobby_workspace is not None and self.lobby_workspace.isVisible():
+            self.lobby_workspace._navigate(view)
+            self.lobby_workspace.raise_()
+            self.lobby_workspace.activateWindow()
+            return
+        self.lobby_workspace = LobbyWorkspace(self.root, self, initial_view=view)
+        self.lobby_workspace.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        self.lobby_workspace.destroyed.connect(lambda *_: setattr(self, "lobby_workspace", None))
+        self.lobby_workspace.showMaximized()
 
     def _show_diagnostics(self):
         rows = local_diagnostics(self.root)
