@@ -49,7 +49,7 @@ function intercept(url, mode = 'cors') {
     assert.equal(intercept('https://growth.skyed.org' + url, 'navigate'), undefined);
     assert.equal(intercept('https://growth.skyed.org' + url, 'cors'), undefined);
   }
-  const asset = 'https://growth.skyed.org/assets/index.12345678.js';
+  const asset = 'https://growth.skyed.org/assets/index-B6rCBfks.js';
   await intercept(asset);
   await intercept(asset);
   assert.equal(calls, 1);
