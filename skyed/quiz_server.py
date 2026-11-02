@@ -37,6 +37,5 @@ app.mount("/quiz", StaticFiles(directory=str(OUTPUT_DIR), html=True), name="quiz
 def healthz() -> dict:
     return {
         "ok": True,
-        "output_dir": str(OUTPUT_DIR),
         "exists": OUTPUT_DIR.exists(),
     }
