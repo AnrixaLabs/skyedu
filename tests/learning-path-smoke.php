@@ -5,6 +5,10 @@ $GLOBALS['shortcode'] = [];
 $GLOBALS['enqueue'] = [];
 $GLOBALS['locale'] = 'en_US';
 function add_shortcode($name, $callback) { $GLOBALS['shortcode'][$name] = $callback; }
+function add_action($name, $callback) { $GLOBALS['action'][$name] = $callback; }
+function is_singular() { return true; }
+function get_post() { return (object)['post_content' => '[skyed_learning_path]']; }
+function has_shortcode($content, $name) { return strpos($content, '[' . $name) !== false; }
 function shortcode_atts($defaults, $atts, $name) { return array_merge($defaults, $atts); }
 function get_locale() { return $GLOBALS['locale']; }
 function wp_parse_url($url, $component = -1) { return parse_url($url, $component); }
@@ -29,6 +33,8 @@ $_SERVER['REQUEST_URI'] = '/zh/tools/';
 check(strpos($render([]), 'data-lang="zh"') !== false, 'Chinese URL locale inference');
 $_SERVER['REQUEST_URI'] = '/en/tools/';
 check(strpos($render([]), 'data-lang="en"') !== false, 'English URL locale inference');
+check(isset($GLOBALS['action']['wp_enqueue_scripts']), 'Pre-header enqueue hook registered');
+$GLOBALS['action']['wp_enqueue_scripts']();
 check(count($GLOBALS['enqueue']) >= 2, 'Assets enqueued');
 check(strpos($render(['lang' => '" onmouseover="alert(1)']), 'onmouseover=') === false, 'Invalid language sanitized');
 echo "SKYED_BILINGUAL_SHORTCODE_SMOKE=PASS\n";
