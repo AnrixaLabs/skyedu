@@ -1,0 +1,97 @@
+name: SkyED Lobby Designer integrated release CI
+on:
+  push:
+    branches: [feature/course-hub-lobby-integrated-v2.3.0, feature/homework-automation-v2, master, main]
+    paths: ['skyed_lobby/**', 'skyed_control/**', 'skyed_control_panel.py', 'scripts/package_control_panel_v230.py', 'scripts/Install-SkyED-ControlPanel-v2.3.0.ps1', '.github/workflows/lobby-designer-ci.yml']
+  pull_request:
+    branches: [feature/homework-automation-v2, master, main]
+    paths: ['skyed_lobby/**', 'skyed_control/**', 'skyed_control_panel.py', 'scripts/package_control_panel_v230.py', 'scripts/Install-SkyED-ControlPanel-v2.3.0.ps1', '.github/workflows/lobby-designer-ci.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-lobby-integrated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Python and content API tests
+        run: |
+          python -m compileall -q skyed_control skyed_lobby skyed_control_panel.py
+          python -m unittest discover -s skyed_lobby/tests -p 'test_control_lobby.py' -v
+          python -m unittest discover -s tests -p 'test_control_panel_registry.py' -v
+      - name: Client-side JS integrity
+        run: |
+          node --check skyed_lobby/site/assets/app.js
+          node --check skyed_lobby/tools/editor.js
+      - name: Linux Qt requirements
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libegl1 libgl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0
+          python -m pip install 'PySide6>=6.7,<7'
+      - name: Real Qt navigation smoke
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m unittest discover -s tests -p 'test_control_panel_qt.py' -v
+          python skyed_control_panel.py --smoke-test
+      - name: Full reproducible Windows distribution
+        run: |
+          python scripts/package_control_panel_v230.py --out dist/SkyED-ControlPanel-Lobby-v2.3.0.zip
+          python scripts/package_control_panel_v230.py --out dist/check.zip
+          python -c "from pathlib import Path; import hashlib; a=Path('dist/SkyED-ControlPanel-Lobby-v2.3.0.zip').read_bytes(); b=Path('dist/check.zip').read_bytes(); assert a == b; print('V230_REPRODUCIBLE_SHA256='+hashlib.sha256(a).hexdigest())"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SkyED-ControlPanel-Lobby-v2.3.0
+          path: dist/SkyED-ControlPanel-Lobby-v2.3.0.zip
+          if-no-files-found: error
+          retention-days: 60
+
+  windows-lobby-integrated:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Windows PowerShell installer parse
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'scripts/Install-SkyED-ControlPanel-v2.3.0.ps1'),
+            [ref]$tokens, [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          Write-Host 'V230_WINDOWS_INSTALLER_SYNTAX=PASS'
+      - name: Windows local save and navigation tests
+        shell: pwsh
+        run: |
+          python -m compileall -q skyed_control skyed_lobby skyed_control_panel.py
+          python -m unittest discover -s skyed_lobby/tests -p 'test_control_lobby.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'V230_WINDOWS_LOBBY_API_FAILED' }
+          python -m unittest discover -s tests -p 'test_control_panel_registry.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'V230_WINDOWS_REGISTRY_FAILED' }
+      - name: Install Windows PySide6 runtime
+        run: python -m pip install 'PySide6>=6.7,<7'
+      - name: Windows Qt UI smoke
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m unittest discover -s tests -p 'test_control_panel_qt.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'V230_WINDOWS_QT_TESTS_FAILED' }
+          python skyed_control_panel.py --smoke-test
+          if ($LASTEXITCODE -ne 0) { throw 'V230_WINDOWS_QT_SMOKE_FAILED' }
+          Write-Host 'V230_WINDOWS_QT=PASS'
