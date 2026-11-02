@@ -1,0 +1,42 @@
+name: SkyEd plugin and quiz checks
+
+on:
+  push:
+    paths:
+      - 'wp_plugin/**'
+      - 'skyed/quizzes/render/**'
+      - 'skyed/quiz_server.py'
+      - 'tests/**'
+      - '.github/workflows/skyed-quality.yml'
+  pull_request:
+    paths:
+      - 'wp_plugin/**'
+      - 'skyed/quizzes/render/**'
+      - 'skyed/quiz_server.py'
+      - 'tests/**'
+      - '.github/workflows/skyed-quality.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate PHP syntax
+        run: |
+          php -l wp_plugin/skyed-learning-path/skyed-learning-path.php
+          php -l wp_plugin/skyed-lesson-renderer/skyed-lesson-renderer.php
+      - name: Validate JavaScript syntax
+        run: |
+          node --check wp_plugin/skyed-learning-path/assets/learning-path.js
+          node --check skyed/quizzes/render/runtime.js
+      - name: Run learning-path tests
+        run: |
+          node --test tests/learning-path.test.cjs
+          php tests/learning-path-smoke.php
