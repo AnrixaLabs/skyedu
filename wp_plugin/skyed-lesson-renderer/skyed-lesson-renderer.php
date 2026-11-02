@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SkyEd Lesson Renderer Next
  * Description: Renders SkyEd-generated lesson payload data (cards + audio + practice) via shortcode.
- * Version: 0.4.5
+ * Version: 0.4.6
  * Author: Sky Education
  */
 
@@ -24,9 +24,13 @@ class SkyEd_Lesson_Renderer {
         // Pronunciation launcher is preserved in code but intentionally not mounted on public pages for now.
     }
 
+    // Lesson JSON uploads are restricted to site administrators by default.
     public static function allow_payload_mimes($mimes, $user) {
         if (!is_array($mimes)) {
             $mimes = [];
+        }
+        if (!current_user_can('manage_options')) {
+            return $mimes;
         }
         $mimes['json'] = 'application/json';
         $mimes['txt'] = 'text/plain';
@@ -34,14 +38,27 @@ class SkyEd_Lesson_Renderer {
     }
 
     public static function fix_payload_filetype($data, $file, $filename, $mimes, $real_mime) {
+        if (!current_user_can('manage_options')) {
+            return $data;
+        }
         $ext = strtolower(pathinfo((string)$filename, PATHINFO_EXTENSION));
+        if ($ext !== 'json' && $ext !== 'txt') {
+            return $data;
+        }
+        if (!is_file($file) || !is_readable($file) || filesize($file) > 1048576) {
+            return $data;
+        }
         if ($ext === 'json') {
-            return ['ext' => 'json', 'type' => 'application/json', 'proper_filename' => $filename];
+            $body = file_get_contents($file);
+            if ($body === false || json_decode($body, true) === null || json_last_error() !== JSON_ERROR_NONE) {
+                return $data;
+            }
         }
-        if ($ext === 'txt') {
-            return ['ext' => 'txt', 'type' => 'text/plain', 'proper_filename' => $filename];
-        }
-        return $data;
+        return [
+            'ext' => $ext,
+            'type' => $ext === 'json' ? 'application/json' : 'text/plain',
+            'proper_filename' => $filename,
+        ];
     }
 
     public static function body_class($classes) {
@@ -71,33 +88,61 @@ class SkyEd_Lesson_Renderer {
             self::CSS_HANDLE,
             plugins_url('assets/skyed-lesson.css', __FILE__),
             [],
-            '0.4.5'
+            '0.4.6'
         );
         wp_enqueue_style(self::CSS_HANDLE);
     }
 
+    /**
+     * Only fetch trusted HTTPS lesson JSON. wp_safe_remote_get validates the
+     * destination against WordPress SSRF protections; redirects are disabled.
+     * Configure SKYED_PAYLOAD_HOST_ALLOWLIST for an approved media CDN.
+     */
     private static function fetch_payload(string $url) : array {
         $url = trim($url);
-        if ($url === '') {
+        if ($url === '' || !preg_match('#^https://#i', $url)) {
             return [];
         }
-        $resp = wp_remote_get($url, [
-            'timeout'     => 15,
-            'redirection' => 3,
-            'headers'     => ['Accept' => 'application/json, text/plain, */*']
+        $host = strtolower((string)wp_parse_url($url, PHP_URL_HOST));
+        $site_host = strtolower((string)wp_parse_url(home_url('/'), PHP_URL_HOST));
+        $allowed = [$site_host];
+        if (defined('SKYED_PAYLOAD_HOST_ALLOWLIST')) {
+            $extra = constant('SKYED_PAYLOAD_HOST_ALLOWLIST');
+            if (is_array($extra)) {
+                $allowed = array_merge($allowed, $extra);
+            }
+        }
+        $allowed = array_filter(array_map(
+            static function ($value) { return strtolower(trim((string)$value)); },
+            $allowed
+        ));
+        if ($host === '' || !in_array($host, $allowed, true)) {
+            return [];
+        }
+        $cache_key = 'skyed_json_' . md5($url);
+        $cached = get_transient($cache_key);
+        if (is_array($cached)) {
+            return $cached;
+        }
+        $resp = wp_safe_remote_get($url, [
+            'timeout' => 10,
+            'redirection' => 0,
+            'limit_response_size' => 1048576,
+            'headers' => ['Accept' => 'application/json, text/plain'],
         ]);
         if (is_wp_error($resp)) {
             return [];
         }
         $code = wp_remote_retrieve_response_code($resp);
         $body = wp_remote_retrieve_body($resp);
-        if ($code < 200 || $code >= 300 || !is_string($body) || $body === '') {
+        if ($code !== 200 || !is_string($body) || $body === '' || strlen($body) > 1048576) {
             return [];
         }
         $data = json_decode($body, true);
-        if (!is_array($data)) {
+        if (!is_array($data) || json_last_error() !== JSON_ERROR_NONE) {
             return [];
         }
+        set_transient($cache_key, $data, 10 * MINUTE_IN_SECONDS);
         return $data;
     }
 
@@ -758,7 +803,7 @@ class SkyEd_Lesson_Renderer {
                     </div>
                     <div class="skyed-result" id="<?php echo esc_attr($uid); ?>_result"></div>
                   </div>
-                  <script type="application/json" id="<?php echo esc_attr($uid); ?>_data"><?php echo wp_json_encode($practice); ?></script>
+                  <script type="application/json" id="<?php echo esc_attr($uid); ?>_data"><?php echo wp_json_encode($practice, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?></script>
                 </div>
 
                 <script>
