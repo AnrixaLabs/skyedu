@@ -1,0 +1,93 @@
+name: GrowthBridge v2.3.1 security candidate qualification
+
+on:
+  pull_request:
+    branches:
+      - growthbridge-v2.3.0-operational
+    paths:
+      - "growthbridge/**"
+      - ".github/workflows/growthbridge-v231-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-qualification:
+    name: Reconstruct, test, security audit and build (no deployment)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check pinned original source archive
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          printf '%s  %s\n' \
+            '6be8aba9c1d63c502483e993e23f61978c2de3c3ae0d779c75f90e41fc866b79' \
+            'growthbridge/releases/SkyED-GrowthBridge-v2.3.0-source.tar.gz' | sha256sum -c -
+          mkdir -p build/growthbridge
+          tar -xzf growthbridge/releases/SkyED-GrowthBridge-v2.3.0-source.tar.gz -C build/growthbridge
+          test -f build/growthbridge/SkyED-GrowthBridge-v2.3.0/backend/server.py
+
+      - name: Apply exact reviewed v2.3.1 hardening
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python growthbridge/tools/harden-v231.py build/growthbridge/SkyED-GrowthBridge-v2.3.0
+          python -m py_compile build/growthbridge/SkyED-GrowthBridge-v2.3.1/backend/*.py
+
+      - name: Run isolated multi-tenant, operations and privacy regressions
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cd build/growthbridge/SkyED-GrowthBridge-v2.3.1
+          python backend/test_multitenant.py
+          python backend/test_operational.py
+          cd ../../..
+          python growthbridge/tools/test-v231-security.py build/growthbridge/SkyED-GrowthBridge-v2.3.1
+          node growthbridge/tools/verify-v231-sw.cjs build/growthbridge/SkyED-GrowthBridge-v2.3.1
+
+      - name: Install locked frontend dependencies and build
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cd build/growthbridge/SkyED-GrowthBridge-v2.3.1
+          # The original 2026-10-15 tar lacks a lockfile. Resolve from the
+          # exact package.json versions, then use npm ci against that lockfile.
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --no-audit --no-fund
+          npm run build
+          npm audit --omit=dev --audit-level=high
+
+      - name: Package qualified candidate only
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          python growthbridge/tools/harden-v231.py --manifest build/growthbridge/SkyED-GrowthBridge-v2.3.1
+          mkdir -p build/out
+          tar -czf build/out/SkyED-GrowthBridge-v2.3.1-qualified-source.tar.gz \
+            -C build/growthbridge \
+            --exclude=node_modules --exclude=dist --exclude=__pycache__ \
+            SkyED-GrowthBridge-v2.3.1
+          sha256sum build/out/SkyED-GrowthBridge-v2.3.1-qualified-source.tar.gz \
+            > build/out/SkyED-GrowthBridge-v2.3.1-qualified-source.tar.gz.sha256
+          echo "GROWTHBRIDGE_V231_CI=PASS PRODUCTION_MODIFIED=NO"
+
+      - name: Preserve candidate and manifest
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: growthbridge-v231-security-candidate
+          path: build/out/*
+          if-no-files-found: error
+          retention-days: 14
