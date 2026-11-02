@@ -3,18 +3,19 @@ name: SkyED Control Panel CI
 on:
   push:
     branches:
-      - feature/control-panel-unified-v2.2.0
+      - feature/control-panel-unified-v2.2.1
       - feature/control-panel-ci-hardening-v2.2.1
       - feature/homework-automation-v2
+      - fix/control-panel-offscreen-fonts-v2.2.1
       - master
       - main
     paths:
       - 'skyed_control_panel.py'
       - 'skyed_control/**'
-      - 'scripts/Install-SkyED-ControlPanel-v2.2.0.ps1'
+      - 'scripts/Install-SkyED-ControlPanel-v2.2.1.ps1'
       - 'scripts/package_control_panel.py'
       - 'tests/test_control_panel_*.py'
-      - 'docs/CONTROL-PANEL-v2.2.0.md'
+      - 'docs/CONTROL-PANEL-v2.2.1.md'
       - '.github/workflows/control-panel-ci.yml'
   pull_request:
     branches:
@@ -24,10 +25,10 @@ on:
     paths:
       - 'skyed_control_panel.py'
       - 'skyed_control/**'
-      - 'scripts/Install-SkyED-ControlPanel-v2.2.0.ps1'
+      - 'scripts/Install-SkyED-ControlPanel-v2.2.1.ps1'
       - 'scripts/package_control_panel.py'
       - 'tests/test_control_panel_*.py'
-      - 'docs/CONTROL-PANEL-v2.2.0.md'
+      - 'docs/CONTROL-PANEL-v2.2.1.md'
       - '.github/workflows/control-panel-ci.yml'
   workflow_dispatch:
 
@@ -65,15 +66,15 @@ jobs:
           python skyed_control_panel.py --smoke-test
       - name: Build and verify five-member overlay ZIP
         run: |
-          python scripts/package_control_panel.py --out dist/SkyED-ControlPanel-v2.2.0.zip
-          python -c "import zipfile; p='dist/SkyED-ControlPanel-v2.2.0.zip'; z=zipfile.ZipFile(p); assert z.testzip() is None; assert len(z.namelist()) == 6; print('CONTROL_PANEL_DISTRIBUTION=PASS')"
+          python scripts/package_control_panel.py --out dist/SkyED-ControlPanel-v2.2.1.zip
+          python -c "import zipfile; p='dist/SkyED-ControlPanel-v2.2.1.zip'; z=zipfile.ZipFile(p); assert z.testzip() is None; assert len(z.namelist()) == 6; print('CONTROL_PANEL_DISTRIBUTION=PASS')"
           python scripts/package_control_panel.py --out dist/repro-check.zip
-          python -c "from pathlib import Path; import hashlib; a=Path('dist/SkyED-ControlPanel-v2.2.0.zip').read_bytes(); b=Path('dist/repro-check.zip').read_bytes(); assert a == b; print('CONTROL_PANEL_REPRODUCIBLE_SHA256=PASS', hashlib.sha256(a).hexdigest())"
+          python -c "from pathlib import Path; import hashlib; a=Path('dist/SkyED-ControlPanel-v2.2.1.zip').read_bytes(); b=Path('dist/repro-check.zip').read_bytes(); assert a == b; print('CONTROL_PANEL_REPRODUCIBLE_SHA256=PASS', hashlib.sha256(a).hexdigest())"
       - name: Publish verified Windows installer artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SkyED-ControlPanel-v2.2.0
-          path: dist/SkyED-ControlPanel-v2.2.0.zip
+          name: SkyED-ControlPanel-v2.2.1
+          path: dist/SkyED-ControlPanel-v2.2.1.zip
           if-no-files-found: error
           retention-days: 30
 
@@ -91,7 +92,7 @@ jobs:
           $tokens = $null
           $errors = $null
           [System.Management.Automation.Language.Parser]::ParseFile(
-            (Resolve-Path 'scripts/Install-SkyED-ControlPanel-v2.2.0.ps1'),
+            (Resolve-Path 'scripts/Install-SkyED-ControlPanel-v2.2.1.ps1'),
             [ref]$tokens, [ref]$errors
           ) | Out-Null
           if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
@@ -111,5 +112,10 @@ jobs:
         run: |
           python -m unittest discover -s tests -p 'test_control_panel_qt.py' -v
           if ($LASTEXITCODE -ne 0) { throw 'WINDOWS_QT_TEST_FAILURE' }
-          python skyed_control_panel.py --smoke-test
+          $fontOutput = & python skyed_control_panel.py --smoke-test 2>&1
+          $fontOutput | Out-Host
           if ($LASTEXITCODE -ne 0) { throw 'WINDOWS_QT_START_FAILURE' }
+          if (($fontOutput | Out-String) -match 'QFontDatabase: Cannot find font directory') {
+            throw 'WINDOWS_OFFSCREEN_FONT_WARNING_REGRESSION'
+          }
+          Write-Host 'WINDOWS_QT_OFFSCREEN_FONT_WARNING=ABSENT'
