@@ -15,6 +15,21 @@ final class SkyEd_Learning_Path {
 
     public static function init(): void {
         add_shortcode(self::SHORTCODE, [self::class, 'render']);
+        add_action('wp_enqueue_scripts', [self::class, 'enqueue_if_needed']);
+    }
+
+    /** Enqueue styles before WordPress prints the page header. */
+    public static function enqueue_if_needed(): void {
+        if (!is_singular()) { return; }
+        $post = get_post();
+        if ($post && isset($post->post_content) && has_shortcode((string)$post->post_content, self::SHORTCODE)) {
+            self::enqueue_assets();
+        }
+    }
+
+    private static function enqueue_assets(): void {
+        wp_enqueue_style('skyed-learning-path', plugins_url('assets/learning-path.css', __FILE__), [], self::VERSION);
+        wp_enqueue_script('skyed-learning-path', plugins_url('assets/learning-path.js', __FILE__), [], self::VERSION, true);
     }
 
     private static function language(string $requested): string {
@@ -69,8 +84,8 @@ final class SkyEd_Learning_Path {
         $atts = shortcode_atts(['lang' => 'auto'], (array)$attributes, self::SHORTCODE);
         $lang = self::language((string)$atts['lang']);
         $t = self::copy($lang);
-        wp_enqueue_style('skyed-learning-path', plugins_url('assets/learning-path.css', __FILE__), [], self::VERSION);
-        wp_enqueue_script('skyed-learning-path', plugins_url('assets/learning-path.js', __FILE__), [], self::VERSION, true);
+        // Fallback for dynamically rendered shortcodes outside post_content.
+        self::enqueue_assets();
         $id = function_exists('wp_unique_id') ? wp_unique_id('skyed-path-') : uniqid('skyed-path-');
         $options = [
             'age' => ['a34', 'a56', 'a79'],
