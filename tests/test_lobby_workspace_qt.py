@@ -14,13 +14,24 @@ from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6 import QtWidgets
+try:
+    from PySide6 import QtWidgets
+except ModuleNotFoundError as error:
+    if error.name != "PySide6":
+        raise
+    QtWidgets = None
+
 from skyed_control.registry import task_by_key
-from skyed_control.lobby_workspace import LobbyWorkspace, verify_bundle
+if QtWidgets is not None:
+    from skyed_control.lobby_workspace import LobbyWorkspace, verify_bundle
+else:
+    LobbyWorkspace = None
+    verify_bundle = None
 
 PROJECT = Path(__file__).resolve().parents[1]
 
 
+@__import__('unittest').skipIf(QtWidgets is None, 'PySide6 unavailable in the homework-only test environment')
 class NativeLobbyWiringTest(TestCase):
     @classmethod
     def setUpClass(cls):
