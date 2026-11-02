@@ -112,7 +112,7 @@ class LocalServerContract(unittest.TestCase):
             self.assertTrue(session["canSave"])
 
     def test_save_requires_token(self):
-        doc = json.loads((self.root / "site/content/lobby.json").read_text())
+        doc = json.loads((self.root / "site/content/lobby.json").read_text(encoding="utf-8"))
         old = (self.root / "site/content/lobby.json").read_bytes()
         with self.assertRaises(HTTPError) as err:
             self.request("/api/save-content", method="POST", doc=doc)
@@ -120,15 +120,15 @@ class LocalServerContract(unittest.TestCase):
         self.assertEqual((self.root / "site/content/lobby.json").read_bytes(), old)
 
     def test_save_updates_only_local_draft(self):
-        doc = json.loads((self.root / "site/content/lobby.json").read_text())
+        doc = json.loads((self.root / "site/content/lobby.json").read_text(encoding="utf-8"))
         doc["site"]["title"] = "Website design updated by Control Panel"
         with self.request("/api/save-content", method="POST", doc=doc, token=self.token, origin=self.origin) as response:
             self.assertTrue(json.loads(response.read())["saved"])
-        self.assertEqual(json.loads((self.root / "site/content/lobby.json").read_text())["site"]["title"], doc["site"]["title"])
+        self.assertEqual(json.loads((self.root / "site/content/lobby.json").read_text(encoding="utf-8"))["site"]["title"], doc["site"]["title"])
         self.assertTrue((self.root / "backups" / "lobby.json.previous").is_file())
 
     def test_bad_url_cannot_save(self):
-        doc = json.loads((self.root / "site/content/lobby.json").read_text())
+        doc = json.loads((self.root / "site/content/lobby.json").read_text(encoding="utf-8"))
         doc["lessons"][0].update(status="published", url="https://evil.invalid/")
         with self.assertRaises(HTTPError) as err:
             self.request("/api/save-content", method="POST", doc=doc, token=self.token)
