@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import time
-from unittest import TestCase
+from unittest import TestCase, skipIf
 from unittest.mock import patch
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -31,7 +31,7 @@ else:
 PROJECT = Path(__file__).resolve().parents[1]
 
 
-@__import__('unittest').skipIf(QtWidgets is None, 'PySide6 unavailable in the homework-only test environment')
+@skipIf(QtWidgets is None, 'PySide6 unavailable in the homework-only test environment')
 class NativeLobbyWiringTest(TestCase):
     @classmethod
     def setUpClass(cls):
