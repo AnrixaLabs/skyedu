@@ -14,7 +14,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from skyed_control.registry import TASKS, Task, local_diagnostics, searchable, task_by_key
 
 ROOT = Path(__file__).resolve().parent
-APP_VERSION = "2.3.0"
+APP_VERSION = "2.3.1"
 SECTIONS = ("CREATE", "OPERATE", "WEBSITES", "SYSTEM")
 
 
@@ -125,6 +125,7 @@ class ControlPanel(QtWidgets.QMainWindow):
         self.root = root.resolve()
         self.legacy = None
         self.lobby_workspace = None
+        self.integration_workspace = None
         self.settings = QtCore.QSettings("SkyEducation", "SkyEdControlPanel")
         self.dark = self.settings.value("appearance/dark", False, bool)
         self.section = "HOME"
@@ -169,7 +170,7 @@ class ControlPanel(QtWidgets.QMainWindow):
         legacy_btn = QtWidgets.QPushButton("Open classic workroom")
         legacy_btn.clicked.connect(lambda: self._open_legacy("Quick"))
         nav_layout.addWidget(legacy_btn)
-        version = QtWidgets.QLabel("Control Panel 2.3.0\nLocal-first · safe navigation")
+        version = QtWidgets.QLabel("Control Panel 2.3.1\nLocal-first · safe navigation")
         version.setObjectName("Muted")
         nav_layout.addWidget(version)
         main.addWidget(sidebar)
@@ -313,6 +314,9 @@ class ControlPanel(QtWidgets.QMainWindow):
 
     def open_task(self, key: str):
         task = task_by_key(key)
+        if task.route == "integration":
+            self._open_integration()
+            return
         if task.route == "lobby":
             self._open_lobby(task.target)
             return
@@ -359,6 +363,18 @@ class ControlPanel(QtWidgets.QMainWindow):
         self.lobby_workspace.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose, True)
         self.lobby_workspace.destroyed.connect(lambda *_: setattr(self, "lobby_workspace", None))
         self.lobby_workspace.showMaximized()
+
+    def _open_integration(self):
+        """Open the offline integration stage builder (never a deployment client)."""
+        from skyed_control.integration_workspace import IntegrationWorkspace
+        if self.integration_workspace is not None and self.integration_workspace.isVisible():
+            self.integration_workspace.raise_()
+            self.integration_workspace.activateWindow()
+            return
+        self.integration_workspace = IntegrationWorkspace(self.root, self)
+        self.integration_workspace.setAttribute(QtCore.Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        self.integration_workspace.destroyed.connect(lambda *_: setattr(self, "integration_workspace", None))
+        self.integration_workspace.showMaximized()
 
     def _show_diagnostics(self):
         rows = local_diagnostics(self.root)

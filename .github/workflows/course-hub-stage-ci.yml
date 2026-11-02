@@ -1,0 +1,108 @@
+name: SkyED Course Hub stage integration gates
+on:
+  push:
+    branches:
+      - feature/course-hub-stage-integration-v2.3.1
+      - feature/homework-automation-v2
+    paths:
+      - 'scripts/course_hub_integration.py'
+      - 'scripts/Start-SkyED-CourseHub-Integration-v2.3.1.ps1'
+      - 'scripts/Install-SkyED-ControlPanel-v2.3.1.ps1'
+      - 'scripts/package_control_panel_v231.py'
+      - 'skyed_control_panel.py'
+      - 'skyed_control/**'
+      - 'tests/test_course_hub_integration*.py'
+      - '.github/workflows/course-hub-stage-ci.yml'
+  pull_request:
+    branches:
+      - feature/homework-automation-v2
+    paths:
+      - 'scripts/course_hub_integration.py'
+      - 'scripts/Start-SkyED-CourseHub-Integration-v2.3.1.ps1'
+      - 'scripts/Install-SkyED-ControlPanel-v2.3.1.ps1'
+      - 'scripts/package_control_panel_v231.py'
+      - 'skyed_control_panel.py'
+      - 'skyed_control/**'
+      - 'tests/test_course_hub_integration*.py'
+      - '.github/workflows/course-hub-stage-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: course-hub-stage-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  linux-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile source without running production connections
+        run: python -m compileall -q skyed_control skyed_control_panel.py scripts/course_hub_integration.py scripts/package_control_panel_v231.py
+      - name: Verify media immutability, 11 unlinked cards, release gates
+        run: python -m unittest discover -s tests -p 'test_course_hub_integration.py' -v
+      - name: Real Qt desktop requirements
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libegl1 libgl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0
+          python -m pip install 'PySide6>=6.7,<7'
+      - name: Native Qt wiring and GUI
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m unittest discover -s tests -p 'test_course_hub_integration_qt.py' -v
+          python -m unittest discover -s tests -p 'test_control_panel_qt.py' -v
+          python skyed_control_panel.py --smoke-test
+      - name: Byte-reproducible complete update ZIP
+        run: |
+          python scripts/package_control_panel_v231.py --out dist/SkyED-ControlPanel-Lobby-v2.3.1.zip
+          python scripts/package_control_panel_v231.py --out dist/compare.zip
+          python -c "from pathlib import Path; import hashlib; a=Path('dist/SkyED-ControlPanel-Lobby-v2.3.1.zip').read_bytes(); b=Path('dist/compare.zip').read_bytes(); assert a == b, 'nonreproducible ZIP'; print('STAGE_ZIP_SHA256='+hashlib.sha256(a).hexdigest())"
+      - name: Upload verified update ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: SkyED-ControlPanel-Lobby-v2.3.1
+          path: dist/SkyED-ControlPanel-Lobby-v2.3.1.zip
+          if-no-files-found: error
+          retention-days: 60
+  windows-integration:
+    runs-on: windows-latest
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Parse both PowerShell 5.1 entry scripts
+        shell: powershell
+        run: |
+          foreach ($script in @('scripts/Install-SkyED-ControlPanel-v2.3.1.ps1', 'scripts/Start-SkyED-CourseHub-Integration-v2.3.1.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script),[ref]$tokens,[ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          }
+          Write-Host 'STAGE_POWERSHELL_SYNTAX=PASS'
+      - name: Windows source security and 433-media parity
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests -p 'test_course_hub_integration.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'WINDOWS_STAGE_ENGINE_TEST_FAILED' }
+      - name: Install Windows native Qt
+        run: python -m pip install 'PySide6>=6.7,<7'
+      - name: Windows Qt integration workspace smoke
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m unittest discover -s tests -p 'test_course_hub_integration_qt.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'WINDOWS_QT_INTEGRATION_FAILED' }
+          python skyed_control_panel.py --smoke-test
+          if ($LASTEXITCODE -ne 0) { throw 'WINDOWS_QT_CONTROL_PANEL_FAILED' }
