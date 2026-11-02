@@ -14,7 +14,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from skyed_control.registry import TASKS, Task, local_diagnostics, searchable, task_by_key
 
 ROOT = Path(__file__).resolve().parent
-APP_VERSION = "2.2.0"
+APP_VERSION = "2.2.1"
 SECTIONS = ("CREATE", "OPERATE", "WEBSITES", "SYSTEM")
 
 
@@ -168,7 +168,7 @@ class ControlPanel(QtWidgets.QMainWindow):
         legacy_btn = QtWidgets.QPushButton("Open classic workroom")
         legacy_btn.clicked.connect(lambda: self._open_legacy("Quick"))
         nav_layout.addWidget(legacy_btn)
-        version = QtWidgets.QLabel("Control Panel 2.2.0\nLocal-first · safe navigation")
+        version = QtWidgets.QLabel("Control Panel 2.2.1\nLocal-first · safe navigation")
         version.setObjectName("Muted")
         nav_layout.addWidget(version)
         main.addWidget(sidebar)
@@ -410,6 +410,14 @@ def main(argv: list[str] | None = None) -> int:
     argv = [value for value in argv if value != "--smoke-test"]
     if smoke:
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        # Only the offscreen test backend needs this font directory override.
+        # The normal Windows platform plugin discovers Windows fonts itself.
+        if sys.platform == "win32" and os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+            windows_root = os.environ.get("WINDIR") or os.environ.get("SystemRoot")
+            if windows_root:
+                font_dir = Path(windows_root) / "Fonts"
+                if font_dir.is_dir():
+                    os.environ["QT_QPA_FONTDIR"] = str(font_dir)
     os.chdir(ROOT)
     app = QtWidgets.QApplication(argv)
     app.setApplicationName("SkyED Control Panel")
