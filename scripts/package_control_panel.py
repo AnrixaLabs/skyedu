@@ -15,15 +15,15 @@ SOURCE_FILES = (
     "skyed_control_panel.py",
     "skyed_control/__init__.py",
     "skyed_control/registry.py",
-    "scripts/Install-SkyED-ControlPanel-v2.2.0.ps1",
-    "docs/CONTROL-PANEL-v2.2.0.md",
+    "scripts/Install-SkyED-ControlPanel-v2.2.1.ps1",
+    "docs/CONTROL-PANEL-v2.2.1.md",
 )
 
 
 def package(repo: Path, output: Path) -> dict:
     repo = repo.resolve()
     output = output.resolve()
-    manifest = {"version": "2.2.0", "kind": "additive-control-panel-overlay", "files": {}}
+    manifest = {"version": "2.2.1", "kind": "additive-control-panel-overlay", "files": {}}
     for name in SOURCE_FILES:
         path = repo / name
         if not path.is_file():
