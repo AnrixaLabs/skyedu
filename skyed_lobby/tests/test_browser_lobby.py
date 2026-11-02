@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @unittest.skipUnless(os.environ.get('SKYED_RUN_BROWSER_TESTS') == '1', 'Browser gate is run by explicit CI')
-@unittest.skipUnless(sync_playwright is not None and shutil.which('chromium'), 'Chromium + playwright required')
+@unittest.skipUnless(sync_playwright is not None, 'Playwright required')
 class RealBrowserTests(unittest.TestCase):
     def test_editor_to_local_save_to_live_preview(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -38,7 +38,7 @@ class RealBrowserTests(unittest.TestCase):
                 self.assertTrue(line.startswith('SKYED_LOBBY_READY='), line)
                 origin = line.split('=',1)[1]
                 with sync_playwright() as p:
-                    browser = p.chromium.launch(executable_path=shutil.which('chromium'), headless=True, args=['--no-sandbox'])
+                    browser = p.chromium.launch(executable_path=shutil.which('chromium') or None, headless=True, args=['--no-sandbox'])
                     page = browser.new_page(viewport={'width':1420,'height':900})
                     errors=[]
                     page.on('pageerror', lambda x: errors.append(str(x)))
@@ -53,7 +53,7 @@ class RealBrowserTests(unittest.TestCase):
                     self.assertEqual(saved['site']['title'],new_title)
                     self.assertTrue((shadow/'backups/lobby.json.previous').exists())
                     page.goto(origin + '/site/', wait_until='domcontentloaded')
-                    page.wait_for_function('(title)=>document.body.innerText.includes(title)',new_title)
+                    page.wait_for_function('(title)=>document.body.innerText.includes(title)', arg=new_title)
                     self.assertEqual(errors, [])
                     browser.close()
             finally:
