@@ -81,6 +81,14 @@ class ExistingDraftPreflight(unittest.TestCase):
         spec = spec_from_file_location("skyed_v232_packager", ROOT / "scripts/package_control_panel_v232.py")
         module = module_from_spec(spec)
         spec.loader.exec_module(module)
+        # Installed overlays deliberately exclude release docs; a full source
+        # checkout must run this packager test, whereas the installer runs
+        # only runtime contracts. Do not hide other missing source members.
+        missing = {name for name in module.MEMBERS if not (ROOT / name).is_file()}
+        release_only = {"docs/CONTROL-PANEL-v2.3.2.md", "docs/RELEASE-CHECKPOINT.json"}
+        if missing and missing.issubset(release_only):
+            self.skipTest("Release documentation is stored in the ZIP, not the installed application")
+        self.assertFalse(missing, "Unexpected missing package input files: " + repr(missing))
         with tempfile.TemporaryDirectory() as temporary:
             work = Path(temporary)
             canonical, winroot = work / "linux.zip", work / "windows-clone"
