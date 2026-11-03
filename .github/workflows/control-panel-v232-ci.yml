@@ -1,0 +1,153 @@
+name: SkyED Control Panel v2.3.2 Windows Installer Gate
+
+on:
+  push:
+    branches:
+      - fix/control-panel-v232-powershell-preflight
+      - feature/homework-automation-v2
+    paths:
+      - 'scripts/Install-SkyED-ControlPanel-v2.3.2.ps1'
+      - 'scripts/validate_lobby_content_v232.py'
+      - 'scripts/package_control_panel_v232.py'
+      - 'tests/test_install_v232.py'
+      - 'skyed_control_panel.py'
+      - 'skyed_control/**'
+      - 'skyed_lobby/**'
+      - '.github/workflows/control-panel-v232-ci.yml'
+  pull_request:
+    branches:
+      - feature/homework-automation-v2
+      - master
+    paths:
+      - 'scripts/Install-SkyED-ControlPanel-v2.3.2.ps1'
+      - 'scripts/validate_lobby_content_v232.py'
+      - 'scripts/package_control_panel_v232.py'
+      - 'tests/test_install_v232.py'
+      - 'skyed_control_panel.py'
+      - 'skyed_control/**'
+      - 'skyed_lobby/**'
+      - '.github/workflows/control-panel-v232-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-source-integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Regression tests for user-edited JSON and PowerShell argument quoting
+        run: |
+          python -m unittest discover -s tests -p 'test_install_v232.py' -v
+          python -m unittest discover -s tests -p 'test_course_hub_integration.py' -v
+          python -m unittest discover -s skyed_lobby/tests -p 'test_control_lobby.py' -v
+          python -m compileall -q skyed_control skyed_lobby scripts skyed_control_panel.py
+      - name: JavaScript syntax checks
+        run: |
+          node --check skyed_lobby/site/assets/app.js
+          node --check skyed_lobby/tools/editor.js
+      - name: Build release twice and compare bytes
+        run: |
+          python scripts/package_control_panel_v232.py --out dist/SkyED-ControlPanel-Lobby-v2.3.2.zip
+          python scripts/package_control_panel_v232.py --out dist/repro-check.zip
+          python -c "from pathlib import Path; import hashlib; a=Path('dist/SkyED-ControlPanel-Lobby-v2.3.2.zip').read_bytes(); b=Path('dist/repro-check.zip').read_bytes(); assert a==b, 'non-reproducible archive'; print('SKYED_V232_REPRODUCIBLE_SHA256='+hashlib.sha256(a).hexdigest())"
+      - name: Publish exact complete Windows overlay
+        uses: actions/upload-artifact@v4
+        with:
+          name: SkyED-ControlPanel-Lobby-v2.3.2
+          path: dist/SkyED-ControlPanel-Lobby-v2.3.2.zip
+          if-no-files-found: error
+          retention-days: 60
+
+  windows-powershell-51-real-installer:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Parse actual Windows PowerShell 5.1 installer
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'scripts/Install-SkyED-ControlPanel-v2.3.2.ps1'),
+            [ref]$tokens, [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          Write-Host 'SKYED_V232_PS51_PARSER=PASS'
+      - name: Install real native Windows Qt
+        run: python -m pip install "PySide6>=6.7,<7"
+      - name: End-to-end Windows PowerShell 5.1 installer with existing edited JSON
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python scripts/package_control_panel_v232.py --out dist/SkyED-ControlPanel-Lobby-v2.3.2.zip
+          if ($LASTEXITCODE -ne 0) { throw 'PACKAGE_FAILED' }
+          $unpacked = Join-Path $env:RUNNER_TEMP 'v232-extracted'
+          Expand-Archive -LiteralPath 'dist/SkyED-ControlPanel-Lobby-v2.3.2.zip' -DestinationPath $unpacked
+          $source = Join-Path $unpacked 'SkyED-ControlPanel-Lobby-v2.3.2'
+          $install = Join-Path $source 'scripts/Install-SkyED-ControlPanel-v2.3.2.ps1'
+          $project = Join-Path $env:RUNNER_TEMP 'v232-fake-existing-project'
+          New-Item -ItemType Directory -Path $project -Force | Out-Null
+          Set-Content -LiteralPath (Join-Path $project 'pyside_gui.py') -Value '# Legacy source untouched' -Encoding ASCII
+          Set-Content -LiteralPath (Join-Path $project 'run_pipeline.py') -Value '# Pipeline untouched' -Encoding ASCII
+          python -m venv --system-site-packages (Join-Path $project '.venv')
+          if ($LASTEXITCODE -ne 0) { throw 'FAKE_VENV_FAILED' }
+          $draft = Join-Path $project 'skyed_lobby/site/content/lobby.json'
+          New-Item -ItemType Directory -Path (Split-Path -Parent $draft) -Force | Out-Null
+          Copy-Item -LiteralPath (Join-Path $source 'skyed_lobby/site/content/lobby.json') -Destination $draft
+          $before = (Get-FileHash -LiteralPath $draft -Algorithm SHA256).Hash
+          $stdout = Join-Path $env:RUNNER_TEMP 'v232-success-stdout.txt'
+          $stderr = Join-Path $env:RUNNER_TEMP 'v232-success-stderr.txt'
+          $proc = Start-Process -FilePath 'powershell.exe' -ArgumentList @(
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $install + '"'),
+            '-SourceRoot', ('"' + $source + '"'), '-ProjectRoot', ('"' + $project + '"'),
+            '-SkipShortcuts'
+          ) -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          $rc = $proc.ExitCode
+          $log = (Get-Content -LiteralPath $stdout -Raw) + "`n" + (Get-Content -LiteralPath $stderr -Raw)
+          Write-Host $log
+          if ($rc -ne 0) { throw 'REAL_WINDOWS_POWERSHELL_INSTALL_FAILED' }
+          if (-not (($log | Out-String) -match 'SKYED_V232_INSTALL=PASS')) { throw 'INSTALL_PASS_MARKER_MISSING' }
+          if (-not (($log | Out-String) -match 'SKYED_PREVIOUS_LOBBY_CONTENT=PRESERVED')) { throw 'DRAFT_VALIDATION_NOT_EXECUTED' }
+          if ((Get-FileHash -LiteralPath $draft -Algorithm SHA256).Hash -ne $before) { throw 'EXISTING_USER_DRAFT_OVERWRITTEN' }
+          if (-not (Test-Path -LiteralPath (Join-Path $project 'scripts/course_hub_integration.py'))) { throw 'STAGING_ENGINE_MISSING' }
+          if (-not (Test-Path -LiteralPath (Join-Path $project 'skyed_control/integration_workspace.py'))) { throw 'CONTROL_WORKSPACE_MISSING' }
+          Write-Host 'SKYED_V232_REAL_WINDOWS_INSTALL_AND_PRESERVATION=PASS'
+          # Negative gate: a genuinely corrupt draft must block before file/shortcut changes.
+          $bad = Join-Path $env:RUNNER_TEMP 'v232-invalid-draft-project'
+          New-Item -ItemType Directory -Path $bad -Force | Out-Null
+          Set-Content -LiteralPath (Join-Path $bad 'pyside_gui.py') -Value '# untouched' -Encoding ASCII
+          Set-Content -LiteralPath (Join-Path $bad 'run_pipeline.py') -Value '# untouched' -Encoding ASCII
+          python -m venv --system-site-packages (Join-Path $bad '.venv')
+          if ($LASTEXITCODE -ne 0) { throw 'BAD_CASE_VENV_FAILED' }
+          $badDraft = Join-Path $bad 'skyed_lobby/site/content/lobby.json'
+          New-Item -ItemType Directory -Path (Split-Path -Parent $badDraft) -Force | Out-Null
+          Set-Content -LiteralPath $badDraft -Value '{invalid-json' -Encoding UTF8
+          $badHash = (Get-FileHash -LiteralPath $badDraft -Algorithm SHA256).Hash
+          $badOut = Join-Path $env:RUNNER_TEMP 'v232-invalid-stdout.txt'
+          $badErr = Join-Path $env:RUNNER_TEMP 'v232-invalid-stderr.txt'
+          $badProc = Start-Process -FilePath 'powershell.exe' -ArgumentList @(
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $install + '"'),
+            '-SourceRoot', ('"' + $source + '"'), '-ProjectRoot', ('"' + $bad + '"'),
+            '-SkipShortcuts'
+          ) -Wait -PassThru -RedirectStandardOutput $badOut -RedirectStandardError $badErr
+          $badExit = $badProc.ExitCode
+          $out = (Get-Content -LiteralPath $badOut -Raw) + "`n" + (Get-Content -LiteralPath $badErr -Raw)
+          if ($badExit -eq 0) { throw 'INVALID_DRAFT_WRONGLY_ACCEPTED' }
+          if (-not (($out | Out-String) -match 'SKYED_EXISTING_LOBBY_CONTENT_INVALID_NO_OVERWRITE')) { throw 'NEGATIVE_GATE_MISFIRED' }
+          if (Test-Path -LiteralPath (Join-Path $bad 'skyed_control_panel.py')) { throw 'UNSAFE_INSTALL_BEFORE_VALIDATION' }
+          if ((Get-FileHash -LiteralPath $badDraft -Algorithm SHA256).Hash -ne $badHash) { throw 'INVALID_DRAFT_WAS_MUTATED' }
+          Write-Host 'SKYED_V232_INVALID_DRAFT_FAIL_CLOSED=PASS'
