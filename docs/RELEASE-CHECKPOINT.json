@@ -1,5 +1,5 @@
 {
-  "version": "2.3.1",
+  "version": "2.3.2",
   "milestone": "course-hub-stage-integration",
   "status": "LOCAL_STAGING_ENGINE_READY_PRODUCTION_NOT_DEPLOYED",
   "protected_sites": ["skyed.org", "portal.skyed.org", "growth.skyed.org", "anrixa.com", "skyedu.cn"],

@@ -20,7 +20,7 @@ import sys
 import tempfile
 from urllib.parse import unquote, urlsplit
 
-RELEASE = "2.3.1"
+RELEASE = "2.3.2"
 PREVIEW_DIR = "lobby-preview"
 STATIC_SUFFIXES = {".html", ".htm", ".css", ".js", ".json", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".mp3", ".wav", ".ogg", ".m4a", ".txt", ".webmanifest", ".woff2"}
 MEDIA_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".mp3", ".wav", ".ogg", ".m4a"}
