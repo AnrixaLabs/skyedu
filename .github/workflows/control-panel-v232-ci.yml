@@ -6,6 +6,7 @@ on:
       - fix/control-panel-v232-powershell-preflight
       - feature/homework-automation-v2
     paths:
+      - '.gitattributes'
       - 'scripts/Install-SkyED-ControlPanel-v2.3.2.ps1'
       - 'scripts/validate_lobby_content_v232.py'
       - 'scripts/package_control_panel_v232.py'
@@ -19,6 +20,7 @@ on:
       - feature/homework-automation-v2
       - master
     paths:
+      - '.gitattributes'
       - 'scripts/Install-SkyED-ControlPanel-v2.3.2.ps1'
       - 'scripts/validate_lobby_content_v232.py'
       - 'scripts/package_control_panel_v232.py'
