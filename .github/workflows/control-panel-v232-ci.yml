@@ -109,9 +109,16 @@ jobs:
           New-Item -ItemType Directory -Path (Split-Path -Parent $draft) -Force | Out-Null
           Copy-Item -LiteralPath (Join-Path $source 'skyed_lobby/site/content/lobby.json') -Destination $draft
           $before = (Get-FileHash -LiteralPath $draft -Algorithm SHA256).Hash
-          $log = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $install -SourceRoot $source -ProjectRoot $project -SkipShortcuts 2>&1
-          $rc = $LASTEXITCODE
-          $log | Out-Host
+          $stdout = Join-Path $env:RUNNER_TEMP 'v232-success-stdout.txt'
+          $stderr = Join-Path $env:RUNNER_TEMP 'v232-success-stderr.txt'
+          $proc = Start-Process -FilePath 'powershell.exe' -ArgumentList @(
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $install + '"'),
+            '-SourceRoot', ('"' + $source + '"'), '-ProjectRoot', ('"' + $project + '"'),
+            '-SkipShortcuts'
+          ) -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          $rc = $proc.ExitCode
+          $log = (Get-Content -LiteralPath $stdout -Raw) + "`n" + (Get-Content -LiteralPath $stderr -Raw)
+          Write-Host $log
           if ($rc -ne 0) { throw 'REAL_WINDOWS_POWERSHELL_INSTALL_FAILED' }
           if (-not (($log | Out-String) -match 'SKYED_V232_INSTALL=PASS')) { throw 'INSTALL_PASS_MARKER_MISSING' }
           if (-not (($log | Out-String) -match 'SKYED_PREVIOUS_LOBBY_CONTENT=PRESERVED')) { throw 'DRAFT_VALIDATION_NOT_EXECUTED' }
@@ -130,8 +137,15 @@ jobs:
           New-Item -ItemType Directory -Path (Split-Path -Parent $badDraft) -Force | Out-Null
           Set-Content -LiteralPath $badDraft -Value '{invalid-json' -Encoding UTF8
           $badHash = (Get-FileHash -LiteralPath $badDraft -Algorithm SHA256).Hash
-          $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $install -SourceRoot $source -ProjectRoot $bad -SkipShortcuts 2>&1
-          $badExit = $LASTEXITCODE
+          $badOut = Join-Path $env:RUNNER_TEMP 'v232-invalid-stdout.txt'
+          $badErr = Join-Path $env:RUNNER_TEMP 'v232-invalid-stderr.txt'
+          $badProc = Start-Process -FilePath 'powershell.exe' -ArgumentList @(
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $install + '"'),
+            '-SourceRoot', ('"' + $source + '"'), '-ProjectRoot', ('"' + $bad + '"'),
+            '-SkipShortcuts'
+          ) -Wait -PassThru -RedirectStandardOutput $badOut -RedirectStandardError $badErr
+          $badExit = $badProc.ExitCode
+          $out = (Get-Content -LiteralPath $badOut -Raw) + "`n" + (Get-Content -LiteralPath $badErr -Raw)
           if ($badExit -eq 0) { throw 'INVALID_DRAFT_WRONGLY_ACCEPTED' }
           if (-not (($out | Out-String) -match 'SKYED_EXISTING_LOBBY_CONTENT_INVALID_NO_OVERWRITE')) { throw 'NEGATIVE_GATE_MISFIRED' }
           if (Test-Path -LiteralPath (Join-Path $bad 'skyed_control_panel.py')) { throw 'UNSAFE_INSTALL_BEFORE_VALIDATION' }

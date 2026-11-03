@@ -61,6 +61,12 @@ def build(repo: Path, target: Path) -> str:
         if path.is_symlink() or not path.is_file():
             raise FileNotFoundError("Release input missing/unsafe: " + member)
         data = path.read_bytes()
+        if b"\x00" in data:
+            raise ValueError("Release inputs must be text, never binaries")
+        # Git on Windows may checkout text sources as CRLF even when the Git
+        # blob and Linux checkout use LF. Normalize package members WITHOUT
+        # writing back to the checkout, so Windows/Linux archives are identical.
+        data = data.replace(b"\r\n", b"\n")
         contents[member] = data
         manifest["files"][member] = hashlib.sha256(data).hexdigest()
     contents["member-sha256.json"] = (json.dumps(manifest, sort_keys=True, indent=2, ensure_ascii=False) + "\n").encode("utf-8")

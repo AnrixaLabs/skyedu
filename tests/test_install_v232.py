@@ -75,6 +75,26 @@ class ExistingDraftPreflight(unittest.TestCase):
         self.assertNotEqual(self.run_validator().returncode, 0)
         self.assertEqual(target.read_bytes(), APPROVED_DRAFT.read_bytes())
 
+    def test_windows_crlf_checkout_produces_identical_archive(self):
+        """Git may translate text to CRLF on Windows; the release must not drift."""
+        from importlib.util import module_from_spec, spec_from_file_location
+        spec = spec_from_file_location("skyed_v232_packager", ROOT / "scripts/package_control_panel_v232.py")
+        module = module_from_spec(spec)
+        spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as temporary:
+            work = Path(temporary)
+            canonical, winroot = work / "linux.zip", work / "windows-clone"
+            winroot.mkdir()
+            for name in module.MEMBERS:
+                source = ROOT / name
+                output = winroot / name
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_bytes(source.read_bytes().replace(b"\n", b"\r\n"))
+            module.build(ROOT, canonical)
+            windows = work / "windows.zip"
+            module.build(winroot, windows)
+            self.assertEqual(canonical.read_bytes(), windows.read_bytes())
+
     def test_windows_installer_uses_file_instead_of_inline_code(self):
         s = INSTALLER.read_text(encoding="utf-8")
         self.assertNotIn("& $py -c", s)
