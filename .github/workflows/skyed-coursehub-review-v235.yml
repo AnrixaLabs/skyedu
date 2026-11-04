@@ -1,0 +1,102 @@
+name: SkyED Course Hub review gate v2.3.5
+
+on:
+  push:
+    branches: [feature/course-hub-review-v235, feature/homework-automation-v2]
+    paths:
+      - 'tools/skyed_coursehub_review_v235/**'
+      - '.github/workflows/skyed-coursehub-review-v235.yml'
+  pull_request:
+    branches: [feature/homework-automation-v2]
+    paths:
+      - 'tools/skyed_coursehub_review_v235/**'
+      - '.github/workflows/skyed-coursehub-review-v235.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-unit-and-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile source and exercise 21 synthetic tests
+        run: |
+          python -m py_compile tools/skyed_coursehub_review_v235/scripts/verify_stage_report.py
+          python -m unittest discover -s tools/skyed_coursehub_review_v235/tests -v
+
+  windows-native-powershell-51:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Parse the exact PowerShell 5.1 review script
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          $script = Resolve-Path 'tools/skyed_coursehub_review_v235/Verify-Captured-Stage.ps1'
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            $script.Path, [ref]$tokens, [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -ne 0) {
+            $errors | ForEach-Object { Write-Error $_ }
+            throw 'PS51_SYNTAX_FAILED'
+          }
+          Write-Host 'SKYED_V235_POWERSHELL51_SYNTAX=PASS'
+      - name: Python tests on Windows cp1252 default codepage
+        shell: powershell
+        run: |
+          python -m unittest discover -s tools/skyed_coursehub_review_v235/tests -v
+          if ($LASTEXITCODE -ne 0) { throw 'SKYED_V235_WINDOWS_PYTHON_FAILED' }
+      - name: End-to-end automatic source discovery and old-command fallback
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $workspace = Join-Path $env:RUNNER_TEMP 'SkyED Test Stage With Spaces'
+          $toolRoot = Join-Path $env:GITHUB_WORKSPACE 'tools/skyed_coursehub_review_v235'
+          $script = Join-Path $toolRoot 'Verify-Captured-Stage.ps1'
+          python (Join-Path $toolRoot 'tests/create_test_fixture.py') $workspace
+          if ($LASTEXITCODE -ne 0) { throw 'SYNTHETIC_FIXTURE_FAILED' }
+
+          $out1 = Join-Path $env:RUNNER_TEMP 'SkyED Review Explicit.json'
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -Workspace $workspace -Output $out1
+          if ($LASTEXITCODE -ne 0) { throw 'SKYED_V235_WINDOWS_AUTO_DISCOVERY_FAILED' }
+          $doc = Get-Content -LiteralPath $out1 -Raw | ConvertFrom-Json
+          if ($doc.result -ne 'PASS_STAGED_TECHNICAL_GATE_ONLY' -or $doc.teacher_review -ne 'PENDING') {
+            throw 'SKYED_V235_WRONG_REVIEW_RESULT'
+          }
+          if ($doc.production_promotion -ne $false) { throw 'SKYED_V235_PRODUCTION_GATE_OPEN' }
+
+          # This reproduces the user's missing Downloads ZIP, while the
+          # matching report and staged directories are present.
+          $missingArchive = Join-Path $env:RUNNER_TEMP 'report-20261104-234112.zip'
+          if (Test-Path -LiteralPath $missingArchive) { throw 'TEST_ARCHIVE_UNEXPECTEDLY_EXISTS' }
+          $out2 = Join-Path $env:RUNNER_TEMP 'SkyED Review Fallback.json'
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -Workspace $workspace -Archive $missingArchive -Output $out2
+          if ($LASTEXITCODE -ne 0) { throw 'SKYED_V235_MISSING_ARCHIVE_FALLBACK_FAILED' }
+          if ((Get-Content -LiteralPath $out2 -Raw | ConvertFrom-Json).result -ne 'PASS_STAGED_TECHNICAL_GATE_ONLY') {
+            throw 'SKYED_V235_FALLBACK_RESULT_INVALID'
+          }
+
+          $report = Join-Path $workspace 'report-20261104-234112'
+          $stage = Join-Path $workspace 'staged-20261104-234112'
+          $out3 = Join-Path $env:RUNNER_TEMP 'SkyED Review Direct.json'
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $script -ReportDir $report -StageDir $stage -Output $out3
+          if ($LASTEXITCODE -ne 0) { throw 'SKYED_V235_DIRECT_PAIR_FAILED' }
+          Write-Host 'SKYED_V235_WINDOWS_AUTODISCOVERY=PASS'
+          Write-Host 'SKYED_V235_WINDOWS_MISSING_ARCHIVE_RECOVERY=PASS'
+          Write-Host 'SKYED_V235_WINDOWS_EXPLICIT_PAIR=PASS'
+          Write-Host 'SKYED_V235_PRODUCTION_PROMOTION=false'
