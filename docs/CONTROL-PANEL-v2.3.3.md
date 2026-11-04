@@ -57,7 +57,7 @@ Open the exact `SKYED_STAGE_PREVIEW` URL printed. This server binds only to `127
 - Do **not** replace the current production homepage, upload drafts, or set a card status to `published` before lesson routing and media parity are verified.
 - The legacy curriculum remains at the root; `/lobby-preview/` is additional.
 - A staged site is a **local test only**. No remote URL availability, SSH authentication, production edit, browser playback, or DNS/TLS status is certified by CI.
-- Real capture and the 11-lesson mapping remain outstanding. The deployment/promotion function intentionally does not exist in this release.
+- The uploaded November 4 snapshot and all 11 technical lesson routes have now been reconciled locally. Formal teacher approval, independent server recency/identity check, and a separate production release gate remain outstanding. The deployment/promotion function intentionally does not exist in this release.
 - Unrecognized production file types or unexpectedly missing media block staging for investigation. Excluded private files must never be re-exported into a public deployment.
 - No approval is implied for the four placeholder curricula or the previous vocabulary defect.
 
