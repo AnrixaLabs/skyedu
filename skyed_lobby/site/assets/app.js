@@ -1,4 +1,4 @@
-/* SkyED Course Hub Lobby 1.3.0 — no frameworks, remote APIs, or unsafe HTML insertion. */
+/* SkyED Course Hub Lobby 1.3.3 — no frameworks, remote APIs, or unsafe HTML insertion. */
 (() => {
   'use strict';
   const KNOWN_ICONS = new Set(['compass','grid','book','bookmark','search','chevron','arrow','sparkles','chat','shapes','target','clock','close','filter','menu','list','heart','language','check']);
@@ -15,7 +15,7 @@
   };
   const state = {data: null, page: 'discover', program: null, search: '', level: '', type: '', sort: 'Featured', group: '', language:'en', favorites: new Set(), focusAfterModal: null};
   const english = {
-    discover:'Discover',programs:'Programs',lessons:'All lessons',saved:'Saved',search:'Search courses, topics, lessons...',allPrograms:'All programs',allLevels:'All levels',allTypes:'All types',viewAll:'View all',clearFilters:'Clear filters',draft:'Needs content',planned:'Coming soon',save:'Save',savedAction:'Saved',browse:'Browse program',viewDetails:'View details',openLesson:'Open lesson',unlinked:'Waiting for verified lesson link',noResults:'Nothing matching your search',noResultsDetail:'Try a different search, or clear your filters.',collections:'Explore learning paths',collectionDesc:'Find a little adventure for every curious mind.',continue:'Inside the classroom',continueDesc:'A tidy collection of topics, practice, and future discoveries.',featured:'Featured',results:'results',close:'Close',language:'Language',menu:'Open menu',back:'Back',demoNotice:'Draft lobby: example content and lesson links must be approved before publication.',editHint:'Edit this item in content/lobby.json',statusLabel:'Status',notReady:'Not linked yet',details:'Program details',home:'Home',about:'About this space',copyright:'Sky Education · Course Hub',programsCount:'Learning paths',lessonCount:'Lesson placeholders',browseLesson:'Explore lessons',byUnit:'Units',sort:'Sort',emptySaved:'Your collection starts here',emptySavedDetail:'Bookmark a lesson to keep it in this browser.',reset:'Reset',allUnits:'All units',year:'Learning space',showing:'Showing',available:'Available',previewOnly:'Content preview',group:'Unit',level:'Level',type:'Type',duration:'Duration',lesson:'Lesson',program:'Program',minutes:'min',returnToPrograms:'All programs',noLive:'This item is a draft, not a live lesson',pilot:'Pilot',statusNeedsLink:'Needs linking',selected:'Selected'};
+    discover:'Discover',programs:'Programs',lessons:'All lessons',saved:'Saved',search:'Search courses, topics, lessons...',allPrograms:'All programs',allLevels:'All levels',allTypes:'All types',viewAll:'View all',clearFilters:'Clear filters',draft:'Needs content',planned:'Coming soon',save:'Save',savedAction:'Saved',browse:'Browse program',viewDetails:'View details',openLesson:'Open lesson',unlinked:'Waiting for verified lesson link',noResults:'Nothing matching your search',noResultsDetail:'Try a different search, or clear your filters.',collections:'Explore learning paths',collectionDesc:'Find a little adventure for every curious mind.',continue:'Inside the classroom',continueDesc:'A tidy collection of topics, practice, and future discoveries.',featured:'Featured',results:'results',close:'Close',language:'Language',menu:'Open menu',back:'Back',demoNotice:'Draft lobby: example content and lesson links must be approved before publication.',editHint:'Edit this item in content/lobby.json',statusLabel:'Status',notReady:'Not linked yet',details:'Program details',home:'Home',about:'About this space',copyright:'Sky Education · Course Hub',programsCount:'Learning paths',lessonCount:'Lessons',browseLesson:'Explore lessons',byUnit:'Units',sort:'Sort',emptySaved:'Your collection starts here',emptySavedDetail:'Bookmark a lesson to keep it in this browser.',reset:'Reset',allUnits:'All units',year:'Learning space',showing:'Showing',available:'Available',verifiedPreview:'Verified pilot preview',openVerifiedPreview:'Open existing lesson',previewOnly:'Content preview',group:'Unit',level:'Level',type:'Type',duration:'Duration',lesson:'Lesson',program:'Program',minutes:'min',returnToPrograms:'All programs',noLive:'This item is a draft, not a live lesson',pilot:'Pilot',statusNeedsLink:'Needs linking',selected:'Selected'};
   const labels = (key) => (state.language === 'zh' ? state.data?.translations?.zh?.[key] : null) || english[key] || key;
   const elem = (tag, cls = '', text = '') => {const e = document.createElement(tag); if(cls)e.className=cls; if(text !== '') e.textContent=String(text); return e;};
   const icon = (name, cls = '') => {const s=document.createElementNS('http://www.w3.org/2000/svg','svg'); if(cls)s.setAttribute('class',cls);s.setAttribute('aria-hidden','true'); const u=document.createElementNS('http://www.w3.org/2000/svg','use');u.setAttribute('href','#icon-'+(KNOWN_ICONS.has(name)?name:'sparkles'));s.append(u);return s;};
@@ -38,7 +38,7 @@
     return null;
   };
   // Future Sunny QLoRA illustrations are local media assets, never remote URLs.
-  const safeImagePath = (value) => isString(value) && /^assets\/media\/[a-zA-Z0-9_\/-]+\.(?:png|jpg|jpeg|webp|svg)$/.test(value) && !value.includes('..') ? value : null;
+  const safeImagePath = (value) => isString(value) && (/^assets\/media\/[a-zA-Z0-9_\/-]+\.(?:png|jpg|jpeg|webp|svg)$/.test(value) || /^\/assets\/media\/v1\/[a-zA-Z0-9_\/-]+\.(?:png|jpg|jpeg|webp)$/.test(value)) && !value.includes('..') ? value : null;
   const imageOrFallback = (path, cls, alt) => {
     const safe=safeImagePath(path);
     if(!safe)return null;
@@ -47,7 +47,10 @@
     image.addEventListener('error',()=>image.remove());
     return image;
   };
-  const isLive = (x) => !x.placeholder && x.status==='published' && Boolean(allowedLink(x.url));
+  // Pilot links are technically verified against the captured legacy hash router.
+  // This status NEVER implies formal teacher review or production approval.
+  const isPreviewLinked = (x) => !x.placeholder && x.status==='verified-preview' && Boolean(allowedLink(x.url));
+  const isLive = (x) => !x.placeholder && (x.status==='published' || x.status==='verified-preview') && Boolean(allowedLink(x.url));
   const heading = (eyebrow,title,desc) => {const block=elem('div','page-heading');const copy=elem('div');add(copy,elem('div','eyebrow',eyebrow),elem('h1','',title),elem('p','',desc));block.append(copy);return block;};
   const hSection = (kicker,title,description,onViewAll) => {const h=elem('div','section-header');const left=elem('div');add(left,elem('div','section-eyebrow',kicker),elem('h2','',title));if(description)left.append(elem('p','',description));h.append(left);if(onViewAll){const b=button('text-action','',onViewAll,labels('viewAll'));add(b,elem('span','',labels('viewAll')),icon('arrow'));h.append(b);}return h;};
   const changePage = (page,program='') => {
@@ -165,7 +168,7 @@
     if(photo){number.textContent='';number.append(photo);}
     add(top,number,label,save);
     add(card,top,elem('h3','',lesson.title),elem('p','',lesson.summary));
-    const foot=elem('div','lesson-card-foot');const status=elem('span','', '');const dot=elem('span','status-dot'+(isLive(lesson)?' ready':''));add(status,dot,elem('span','',isLive(lesson)?labels('available'):labels('statusNeedsLink')));
+    const foot=elem('div','lesson-card-foot');const status=elem('span','', '');const dot=elem('span','status-dot'+(isLive(lesson)?' ready':''));add(status,dot,elem('span','',isPreviewLinked(lesson)?labels('verifiedPreview'):(isLive(lesson)?labels('available'):labels('statusNeedsLink'))));
     const details=button('detail-link','',()=>openDetail(lesson),labels('viewDetails')+': '+lesson.title);add(details,elem('span','',labels('viewDetails')),icon('arrow'));
     add(foot,status,details);card.append(foot);return card;
   };
@@ -217,12 +220,12 @@
     add(modal,top,elem('h2','',lesson.title),elem('p','',lesson.summary));
     const meta=elem('div','detail-meta');
     const group=state.data.groups.find(g=>g.id===lesson.groupId);
-    for(const [label,value] of [[labels('program'),state.data.programs.find(p=>p.id===lesson.programId)?.title||'—'],[labels('group'),group?.title||'—'],[labels('level'),lesson.level||'—'],[labels('type'),lesson.type||'—'],[labels('statusLabel'),isLive(lesson)?labels('available'):labels('statusNeedsLink')]]){
+    for(const [label,value] of [[labels('program'),state.data.programs.find(p=>p.id===lesson.programId)?.title||'—'],[labels('group'),group?.title||'—'],[labels('level'),lesson.level||'—'],[labels('type'),lesson.type||'—'],[labels('statusLabel'),isPreviewLinked(lesson)?labels('verifiedPreview'):(isLive(lesson)?labels('available'):labels('statusNeedsLink'))]]){
       const line=elem('div','detail-meta-row');add(line,elem('span','',label),elem('span','',value));meta.append(line);
     }modal.append(meta);
     if(!isLive(lesson))modal.append(elem('p','dialog-warning',labels('noLive')+'. '+labels('editHint')+'.'));
     const actions=elem('div','detail-actions');
-    if(isLive(lesson))actions.append(button('button button-primary',labels('openLesson'),()=>{window.location.assign(allowedLink(lesson.url));}));
+    if(isLive(lesson))actions.append(button('button button-primary',labels(isPreviewLinked(lesson)?'openVerifiedPreview':'openLesson'),()=>{window.location.assign(allowedLink(lesson.url));}));
     actions.append(button('button button-secondary',labels('close'),()=>ui.dialog.close()));
     modal.append(actions);ui.modal.append(modal);ui.dialog.showModal();close.focus();
   };

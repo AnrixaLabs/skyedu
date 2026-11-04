@@ -180,7 +180,7 @@ class IntegrationWorkspace(QtWidgets.QDialog):
     def _copy_capture_command(self):
         cmd = (
             'powershell.exe -NoProfile -ExecutionPolicy Bypass '
-            f'-File "{self.root / "scripts" / "Start-SkyED-CourseHub-Integration-v2.3.2.ps1"}" '
+            f'-File "{self.root / "scripts" / "Start-SkyED-CourseHub-Integration-v2.3.3.ps1"}" '
             f'-ProjectRoot "{self.root}" -Mode CaptureAndStage'
         )
         QtWidgets.QApplication.clipboard().setText(cmd)

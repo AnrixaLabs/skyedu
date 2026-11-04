@@ -1,14 +1,37 @@
 {
-  "version": "2.3.2",
+  "version": "2.3.3",
   "milestone": "course-hub-stage-integration",
   "status": "LOCAL_STAGING_ENGINE_READY_PRODUCTION_NOT_DEPLOYED",
-  "protected_sites": ["skyed.org", "portal.skyed.org", "growth.skyed.org", "anrixa.com", "skyedu.cn"],
+  "protected_sites": [
+    "skyed.org",
+    "portal.skyed.org",
+    "growth.skyed.org",
+    "anrixa.com",
+    "skyedu.cn"
+  ],
   "source_of_truth": "read-only SFTP copy of /var/www/course.skyed.org/current (host must be verified)",
   "new_lobby_public_path_in_local_stage": "/lobby-preview/",
   "requires_capture": true,
   "requires_lesson_mapping": true,
-  "historical_expected_media": {"mp3": 342, "png": 91, "total": 433},
+  "historical_expected_media": {
+    "mp3": 342,
+    "png": 91,
+    "total": 433
+  },
   "automatic_publication": false,
   "production_mutation": false,
-  "reason_not_published": "Unverified existing v1.2.x server content and lesson URLs. No credentials available to authenticate production."
+  "reason_not_published": "Unverified existing v1.2.x server content and lesson URLs. No credentials available to authenticate production.",
+  "source_reconciliation": {
+    "source_capture": "SkyED-CourseHub-Integration.zip, snapshot-20261104-163523",
+    "captured_legacy_file_count": 442,
+    "verified_audio": 342,
+    "verified_images": 91,
+    "source_catalog_sha256": "115c6359ef8383250286e978146ec024178928674e5623f7b6b0217d3f00e5fd",
+    "source_content_sha256": "d8e9f145974359a7f62de65dd7133c68192d2e24bd1ea5f3766c4440fd04bf39",
+    "technical_route_mapping_count": 11,
+    "route_qualification": "VERIFIED_CAPTURED_ROUTES_TEACHER_REVIEW_PENDING",
+    "site_deployment": false,
+    "teacher_review_signed": false,
+    "original_files_mutated": false
+  }
 }
