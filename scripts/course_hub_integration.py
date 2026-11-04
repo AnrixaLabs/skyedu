@@ -1,9 +1,10 @@
 """Non-destructive SkyED Course Hub source reconciliation and preview staging.
 
 Never connects to production or writes to a captured Course Hub snapshot.
-The first stage preserves every byte of the existing published website and
-adds only an isolated /lobby-preview/ directory. Production promotion is NOT
-implemented by design: the 11 unlinked lessons need verified mapping first.
+The stage preserves every byte of the existing website and adds only an
+isolated /lobby-preview/ directory. When source evidence is complete, link the
+11 pilot lessons to their actual captured hash routes, without pretending that
+teacher approval or production promotion has been granted.
 """
 from __future__ import annotations
 
@@ -18,9 +19,9 @@ import re
 import shutil
 import sys
 import tempfile
-from urllib.parse import unquote, urlsplit
+from urllib.parse import unquote, urlsplit, quote
 
-RELEASE = "2.3.2"
+RELEASE = "2.3.3"
 PREVIEW_DIR = "lobby-preview"
 STATIC_SUFFIXES = {".html", ".htm", ".css", ".js", ".json", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".mp3", ".wav", ".ogg", ".m4a", ".txt", ".webmanifest", ".woff2"}
 MEDIA_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".mp3", ".wav", ".ogg", ".m4a"}
@@ -29,6 +30,18 @@ REJECTED_SUFFIXES = {".pem", ".key", ".p12", ".pfx", ".sqlite", ".sqlite3", ".db
 URL_PATTERN = re.compile(r'''(?:href|src)\s*=\s*["']([^"'<>]+)["']|(?:"(?:url|href|path|src)"\s*:\s*")([^"<>]+)"''', re.I)
 MAX_FILES = 20000
 MAX_TOTAL_BYTES = 8 * 1024**3
+SLUG_PATTERN = re.compile(r"^hw-[a-z0-9-]{4,150}$")
+FOLDER_PATTERN = re.compile(r"^[a-z0-9-]{2,120}$")
+MEDIA_REF_PATTERN = re.compile(r"^assets/media/v1/[a-zA-Z0-9_/-]+\.(?:png|jpg|jpeg|webp|mp3|wav|ogg|m4a)$")
+# These pair two independently defined navigation taxonomies; do not match by
+# a guessed ordinal or a fuzzy title.
+UNIT_TO_LOBBY_GROUP = {
+    "source-unit-1": "unit-1",
+    "source-unit-2": "unit-2",
+    "source-unit-3": "unit-3",
+    "lesson-series": "lesson-series",
+    "topic-sessions": "topic-practice",
+}
 
 
 class GateError(Exception):
@@ -171,7 +184,154 @@ def verify_existing(source: Path, stage: Path, report: dict) -> None:
         path = stage / PREVIEW_DIR / rel
         if not path.is_file() or digest(path) != expected:
             raise GateError(f"Staged lobby file missing or modified: {rel}")
+    if report.get("reconciled_lesson_count"):
+        cat = json.loads((source / "data/catalog.v1.json").read_text(encoding="utf-8-sig"))
+        site = json.loads((stage / PREVIEW_DIR / "content/lobby.json").read_text(encoding="utf-8-sig"))
+        if (report.get("source_catalog_sha256")!=digest(source / "data/catalog.v1.json")
+                or report.get("source_content_sha256")!=digest(source / "data/content.v1.json")
+                or report.get("source_router_sha256")!=digest(source / "assets/app-v1.2.0.js")):
+            raise GateError("Verified original lesson routing evidence changed")
+        actual={x.get("url") for x in site.get("lessons",[]) if x.get("status")=="verified-preview"}
+        expected={"/#/lesson/"+quote(x["slug"],safe="") for x in cat["lessons"]}
+        if actual!=expected or len(actual)!=report["reconciled_lesson_count"]:
+            raise GateError("Verified lesson routes changed in stage")
 
+
+
+def _media_refs(value):
+    """Yield every source data media reference, including nested quiz choices."""
+    if isinstance(value, dict):
+        for nested in value.values():
+            yield from _media_refs(nested)
+    elif isinstance(value, list):
+        for nested in value:
+            yield from _media_refs(nested)
+    elif isinstance(value, str) and value.startswith("assets/media/"):
+        yield value
+
+
+def reconcile_catalog(source: Path, existing_files: list, lobby_draft: dict):
+    """Evidence-only hash-route link reconciliation for the 11 pilot lessons.
+
+    Never edit the user's design source. Only the freshly staged copied content
+    may receive resolved titles, covers, routes and media-backed topic groups.
+    No inferred age ranges, publication rights or teacher approvals are added.
+    """
+    catalog_path = source / "data/catalog.v1.json"
+    content_path = source / "data/content.v1.json"
+    if not catalog_path.exists() and not content_path.exists():
+        return None  # Legacy static site may have routes with no catalog; leave unlinked.
+    if not catalog_path.is_file() or not content_path.is_file():
+        raise GateError("CATALOG_GATE=BLOCKED: partial catalog snapshot")
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8-sig"))
+    content = json.loads(content_path.read_text(encoding="utf-8-sig"))
+    if (catalog.get("schema") != "skyed.course-hub.catalog.v1"
+            or content.get("schema") != "skyed.course-hub.content.v1"
+            or catalog.get("site") != "course.skyed.org"):
+        raise GateError("CATALOG_GATE=BLOCKED: unsupported or foreign source schema")
+    if catalog.get("published") is not False or catalog.get("approval",{}).get("formal_teacher_review_record") is not False:
+        raise GateError("CATALOG_GATE=BLOCKED: approval policy has changed; new review required")
+    entries = catalog.get("lessons")
+    if not isinstance(entries,list) or len(entries) != 11 or not isinstance(content.get("lessons"),dict):
+        raise GateError("CATALOG_GATE=BLOCKED: expected exactly 11 source pilot lessons")
+    if len(lobby_draft.get("lessons",[])) != 11:
+        raise GateError("CATALOG_GATE=BLOCKED: lobby pilot placeholders no longer match source")
+    main = (source / "index.html").read_text(encoding="utf-8-sig")
+    app_name = "assets/app-v1.2.0.js"
+    script = source / app_name
+    if app_name not in main or not script.is_file():
+        raise GateError("ROUTE_GATE=BLOCKED: cannot verify current website application entrypoint")
+    app_js = script.read_text(encoding="utf-8-sig")
+    if "#/lesson/${encodeURIComponent(l.slug)}" not in app_js or "bits[0]==='lesson'" not in app_js or "state.content.lessons?.[slug]" not in app_js:
+        raise GateError("ROUTE_GATE=BLOCKED: lesson hash router contract changed")
+    file_hashes = {rel:sha for rel, _, _, sha in existing_files}
+    if file_hashes.get("data/catalog.v1.json") != digest(catalog_path) or file_hashes.get("data/content.v1.json") != digest(content_path):
+        raise GateError("CATALOG_GATE=BLOCKED: source file changed during audit")
+    content_slugs = set(content["lessons"])
+    catalog_slugs = {x.get("slug") for x in entries if isinstance(x,dict)}
+    if len(catalog_slugs) != len(entries) or catalog_slugs != content_slugs:
+        raise GateError("CATALOG_GATE=BLOCKED: mismatched or duplicated slugs")
+    programs = {x.get("id"):x for x in lobby_draft.get("programs",[])}
+    groups = {x.get("id"):x for x in lobby_draft.get("groups",[])}
+    if "young-learners" not in programs or set(UNIT_TO_LOBBY_GROUP.values())-set(groups):
+        raise GateError("CATALOG_GATE=BLOCKED: lobby group identifiers changed; explicit remapping required")
+    source_units = {x.get("id"):x for x in catalog.get("units",[]) if isinstance(x,dict)}
+    if set(source_units) != set(UNIT_TO_LOBBY_GROUP):
+        raise GateError("CATALOG_GATE=BLOCKED: source unit topology changed")
+    refs = set(_media_refs(content))
+    if not refs:
+        raise GateError("MEDIA_GATE=BLOCKED: captured content has no media references")
+    for ref in refs:
+        if not MEDIA_REF_PATTERN.fullmatch(ref) or ref not in file_hashes:
+            raise GateError(f"MEDIA_GATE=BLOCKED: invalid or missing referenced media: {ref}")
+    derived = json.loads(json.dumps(lobby_draft))
+    for source_id, target_id in UNIT_TO_LOBBY_GROUP.items():
+        unit = source_units[source_id]
+        target = next(x for x in derived["groups"] if x["id"]==target_id)
+        target["title"] = unit["title"]
+        target["subtitle"] = unit.get("subtitle","")
+    card_list=[]
+    review=[]
+    total_audio=total_images=0
+    for index, item in enumerate(entries, 1):
+        slug=item["slug"]
+        folder=item.get("sourceFolder","")
+        cover=item.get("cover","")
+        unit=item.get("unitId","")
+        if (not SLUG_PATTERN.fullmatch(slug) or not FOLDER_PATTERN.fullmatch(folder)
+            or unit not in UNIT_TO_LOBBY_GROUP or item.get("catalogStatus") != "approved-pilot"):
+            raise GateError(f"CATALOG_GATE=BLOCKED: unsafe or unapproved pilot lesson {index}")
+        if not MEDIA_REF_PATTERN.fullmatch(cover) or cover not in file_hashes or not cover.endswith((".png",".jpg",".webp",".jpeg")):
+            raise GateError(f"MEDIA_GATE=BLOCKED: missing cover for pilot {slug}")
+        original_media=[r for r in file_hashes if r.startswith(f"assets/media/v1/{folder}/")]
+        if len(original_media)!=item.get("mediaCount"):
+            raise GateError(f"MEDIA_GATE=BLOCKED: lesson {slug} media count changed")
+        detail=content["lessons"].get(slug)
+        if not isinstance(detail,dict) or not isinstance(detail.get("vocab"),list) or not detail["vocab"]:
+            raise GateError(f"CONTENT_GATE=BLOCKED: vocab missing for {slug}")
+        quizzes=detail.get("quiz",{}).get("questions",[])
+        if not isinstance(quizzes,list) or not quizzes or len(quizzes)!=item.get("questions"):
+            raise GateError(f"CONTENT_GATE=BLOCKED: quiz content drift for {slug}")
+        text=item.get("title","")
+        if not isinstance(text,str) or not text.strip() or len(text)>180:
+            raise GateError(f"CATALOG_GATE=BLOCKED: missing lesson title for {slug}")
+        route="/#/lesson/"+quote(slug,safe="")
+        card_list.append({
+            "id":folder, "programId":"young-learners", "groupId":UNIT_TO_LOBBY_GROUP[unit],
+            "title":text, "summary":f"{item.get('sourceLabel','Pilot')} · {len(quizzes)} practice questions · {len(original_media)} verified media files",
+            "type":"Practice", "level":"All ages", "minutes":0,
+            "order":index, "status":"verified-preview", "url":route,
+            "media":"/"+cover, "tags":["pilot",item.get("sourceLabel","").lower(),"verified media"],
+        })
+        review.append({
+            "lesson_id":folder,"lesson_title":text,"verified_existing_route":route,
+            "source_file_sha256":file_hashes["data/catalog.v1.json"],
+            "review_status":"TECHNICALLY_VERIFIED_TEACHER_REVIEW_PENDING",
+            "catalog_slug":slug,"content_file_sha256":file_hashes["data/content.v1.json"],
+            "cover_file_sha256":file_hashes[cover],"source_media_count":len(original_media),
+            "practice_question_count":len(quizzes),"approved_for_publication":False,
+        })
+    if len({x["id"] for x in card_list})!=11 or len({x["url"] for x in card_list})!=11:
+        raise GateError("CATALOG_GATE=BLOCKED: duplicate mapped pilot")
+    derived["lessons"] = card_list
+    for p in derived["programs"]:
+        if p["id"]=="young-learners":
+            p["description"] = "11 authentic lessons from the captured Course Hub, including original picture cards, bilingual audio and interactive practice."
+            p["lessonCount"] = len(card_list)
+            p["status"] = "verified-pilot-preview"
+            p["tag"] = "Captured pilot · original media"
+    derived["site"]["announcement"] = "11 lesson routes and 433 media files were verified against the captured Course Hub. This is a local staging preview; teacher review and deployment authorization remain pending."
+    derived.setdefault("translations",{}).setdefault("zh",{})["verifiedPreview"] = "已核对本地预览链接"
+    derived["translations"]["zh"]["openVerifiedPreview"] = "打开课程预览"
+    derived["contentVersion"] = "derived-pilot-"+file_hashes["data/catalog.v1.json"][:12]
+    return {
+        "lobby":derived,"review":review,
+        "candidate_links":[{"candidate":x["verified_existing_route"],"found_in":"data/catalog.v1.json + assets/app-v1.2.0.js","file_target_exists":True,"approved":False} for x in review],
+        "catalog_sha256":file_hashes["data/catalog.v1.json"],
+        "content_sha256":file_hashes["data/content.v1.json"],
+        "router_sha256":file_hashes[app_name],
+        "media_references_checked":len(refs),
+    }
 
 def stage(source: Path, lobby: Path, output: Path, min_media: int = 400) -> dict:
     source, lobby, output = source.resolve(strict=True), lobby.resolve(strict=True), output.resolve()
@@ -186,6 +346,7 @@ def stage(source: Path, lobby: Path, output: Path, min_media: int = 400) -> dict
     old_files, inventory = audit(source, min_media)
     new_files = safe_tree_for_lobby(lobby)
     lobby_content = json.loads((lobby / "content" / "lobby.json").read_text(encoding="utf-8-sig"))
+    mapped = reconcile_catalog(source, old_files, lobby_content)
     # Published cards are not promoted merely because somebody edited a JSON field.
     published = [x.get("id") for x in lobby_content.get("lessons", []) if x.get("status") == "published"]
     if published:
@@ -203,6 +364,13 @@ def stage(source: Path, lobby: Path, output: Path, min_media: int = 400) -> dict
             dst = temp / PREVIEW_DIR / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             copy2(src, dst)
+        if mapped:
+            # Derived content is staged, never written into the editable draft.
+            # It can open only the verified, original Course Hub hash routes.
+            _write_json(temp / PREVIEW_DIR / "content/lobby.json", mapped["lobby"])
+        staged_lobby = {
+            rel: digest(temp / PREVIEW_DIR / rel) for rel, *_ in new_files
+        }
         report = {
             "schema_version": 1,
             "release": RELEASE,
@@ -211,12 +379,19 @@ def stage(source: Path, lobby: Path, output: Path, min_media: int = 400) -> dict
             "production_promotion_authorized": False,
             "existing_entrypoint_unchanged": True,
             "all_media_bytes_preserved": True,
-            "lesson_mapping_status": "UNVERIFIED_PLACEHOLDERS",
+            "lesson_mapping_status": "VERIFIED_CAPTURED_ROUTES_TEACHER_REVIEW_PENDING" if mapped else "UNVERIFIED_PLACEHOLDERS",
+            "reconciled_lesson_count":len(mapped["review"]) if mapped else 0,
+            "source_catalog_sha256":mapped["catalog_sha256"] if mapped else None,
+            "source_content_sha256":mapped["content_sha256"] if mapped else None,
+            "source_router_sha256":mapped["router_sha256"] if mapped else None,
+            "media_references_checked":mapped["media_references_checked"] if mapped else 0,
+            "verified_lesson_routes":mapped["review"] if mapped else [],
+            "teacher_review_required":True,
             "media": inventory["media"],
             "legacy_files": {rel: h for rel, _, _, h in old_files},
-            "lobby_files": {rel: h for rel, _, _, h in new_files},
+            "lobby_files": staged_lobby,
             "original_lesson_placeholder_count": len(lobby_content.get("lessons", [])),
-            "candidate_links": inventory["candidate_links"],
+            "candidate_links": mapped["candidate_links"] if mapped else inventory["candidate_links"],
         }
         verify_existing(source, temp, report)
         temp.rename(output)
@@ -259,8 +434,18 @@ def write_reports(report: dict, report_dir: Path):
     with (report_dir / "lesson-linking-review.csv").open("w",encoding="utf-8-sig",newline="") as file:
         writer=csv.writer(file)
         writer.writerow(["lesson_id","lesson_title","verified_existing_route","source_file_sha256","review_status"])
-        for i in range(report["original_lesson_placeholder_count"]):
-            writer.writerow([f"pilot-{i+1:02d}","EDIT VERIFIED TITLE","","","HUMAN_REVIEW_REQUIRED"])
+        if report.get("verified_lesson_routes"):
+            for item in report["verified_lesson_routes"]:
+                writer.writerow([item["lesson_id"],item["lesson_title"],item["verified_existing_route"],item["source_file_sha256"],item["review_status"]])
+        else:
+            for i in range(report["original_lesson_placeholder_count"]):
+                writer.writerow([f"pilot-{i+1:02d}","EDIT VERIFIED TITLE","","","HUMAN_REVIEW_REQUIRED"])
+    if report.get("verified_lesson_routes"):
+        with (report_dir / "verified-lesson-evidence.csv").open("w", encoding="utf-8-sig", newline="") as file:
+            columns=list(report["verified_lesson_routes"][0])
+            writer=csv.DictWriter(file,fieldnames=columns)
+            writer.writeheader()
+            writer.writerows(report["verified_lesson_routes"])
 
 
 def preview(root: Path, port: int):

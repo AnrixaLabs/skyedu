@@ -14,7 +14,7 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from skyed_control.registry import TASKS, Task, local_diagnostics, searchable, task_by_key
 
 ROOT = Path(__file__).resolve().parent
-APP_VERSION = "2.3.2"
+APP_VERSION = "2.3.3"
 SECTIONS = ("CREATE", "OPERATE", "WEBSITES", "SYSTEM")
 
 
@@ -170,7 +170,7 @@ class ControlPanel(QtWidgets.QMainWindow):
         legacy_btn = QtWidgets.QPushButton("Open classic workroom")
         legacy_btn.clicked.connect(lambda: self._open_legacy("Quick"))
         nav_layout.addWidget(legacy_btn)
-        version = QtWidgets.QLabel("Control Panel 2.3.2\nLocal-first · safe navigation")
+        version = QtWidgets.QLabel("Control Panel 2.3.3\nLocal-first · safe navigation")
         version.setObjectName("Muted")
         nav_layout.addWidget(version)
         main.addWidget(sidebar)

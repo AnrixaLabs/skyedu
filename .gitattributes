@@ -29,3 +29,12 @@ skyed_lobby/tools/editor.js text eol=lf
 tests/test_course_hub_integration.py text eol=lf
 tests/test_course_hub_integration_qt.py text eol=lf
 tests/test_install_v232.py text eol=lf
+
+# v2.3.3 source successor; preserve previous v2.3.2 lines above.
+docs/CONTROL-PANEL-v2.3.3.md text eol=lf
+scripts/Install-SkyED-ControlPanel-v2.3.3.ps1 text eol=lf
+scripts/Start-SkyED-CourseHub-Integration-v2.3.3.ps1 text eol=lf
+scripts/validate_lobby_content_v233.py text eol=lf
+scripts/package_control_panel_v233.py text eol=lf
+tests/test_install_v233.py text eol=lf
+tests/test_pilot_route_reconciliation.py text eol=lf
