@@ -80,7 +80,7 @@ class PilotRouteReconciliation(unittest.TestCase):
         self.assertFalse(report['production_promotion_authorized'])
         self.assertEqual(len(report['verified_lesson_routes']),11)
         self.assertTrue(all(not x['approved'] for x in report['candidate_links']))
-        derived=json.loads((self.staged/'lobby-preview/content/lobby.json').read_text())
+        derived=json.loads((self.staged/'lobby-preview/content/lobby.json').read_text(encoding='utf-8'))
         self.assertEqual({x['url'] for x in derived['lessons']},{f"/#/lesson/{x['slug']}" for x in self.lessons})
         self.assertTrue(all(x['status']=='verified-preview' for x in derived['lessons']))
         self.assertTrue(all(x['media'].startswith('/assets/media/v1/') for x in derived['lessons']))
@@ -132,14 +132,14 @@ class PilotRouteReconciliation(unittest.TestCase):
 
     def test_case_status_never_claims_publication(self):
         report=stage(self.original,self.lobby,self.staged,min_media=0)
-        staged_data=json.loads((self.staged/'lobby-preview/content/lobby.json').read_text())
+        staged_data=json.loads((self.staged/'lobby-preview/content/lobby.json').read_text(encoding='utf-8'))
         self.assertTrue(all(x['status']!='published' for x in staged_data['lessons']))
         self.assertFalse(report['production_promotion_authorized'])
 
     def test_tampered_generated_route_detected_even_with_matching_content_digest(self):
         report=stage(self.original,self.lobby,self.staged,min_media=0)
         fp=self.staged/'lobby-preview/content/lobby.json'
-        doc=json.loads(fp.read_text())
+        doc=json.loads(fp.read_text(encoding='utf-8'))
         doc['lessons'][0]['url']='/#/lesson/evil'
         fp.write_text(json.dumps(doc),encoding='utf-8')
         # even if a corrupted report hash is updated, semantic route set catches it
