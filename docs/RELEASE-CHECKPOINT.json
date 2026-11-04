@@ -1,0 +1,39 @@
+{
+  "automatic_publication": false,
+  "historical_expected_media": {
+    "mp3": 342,
+    "png": 91,
+    "total": 433
+  },
+  "milestone": "course-hub-stage-integration",
+  "new_lobby_public_path_in_local_stage": "/lobby-preview/",
+  "production_mutation": false,
+  "protected_sites": [
+    "skyed.org",
+    "portal.skyed.org",
+    "growth.skyed.org",
+    "anrixa.com",
+    "skyedu.cn"
+  ],
+  "reason_not_published": "Pilot catalog published:false; formal teacher approval, server recency/identity gate and separate production deployment authorization pending.",
+  "requires_capture": false,
+  "requires_current_host_identity_check": true,
+  "requires_lesson_mapping": false,
+  "requires_teacher_review": true,
+  "source_of_truth": "user-provided read-only capture of course.skyed.org/current, snapshot-20261104-163523; remote identity not independently revalidated",
+  "source_reconciliation": {
+    "captured_legacy_file_count": 442,
+    "original_files_mutated": false,
+    "route_qualification": "VERIFIED_CAPTURED_ROUTES_TEACHER_REVIEW_PENDING",
+    "site_deployment": false,
+    "source_capture": "SkyED-CourseHub-Integration.zip, snapshot-20261104-163523",
+    "source_catalog_sha256": "115c6359ef8383250286e978146ec024178928674e5623f7b6b0217d3f00e5fd",
+    "source_content_sha256": "d8e9f145974359a7f62de65dd7133c68192d2e24bd1ea5f3766c4440fd04bf39",
+    "teacher_review_signed": false,
+    "technical_route_mapping_count": 11,
+    "verified_audio": 342,
+    "verified_images": 91
+  },
+  "status": "SNAPSHOT_RECONCILED_11_ROUTES_STAGE_ONLY_NO_PUBLICATION",
+  "version": "2.3.3"
+}

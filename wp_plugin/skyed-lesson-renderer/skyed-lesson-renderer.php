@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SkyEd Lesson Renderer Next
  * Description: Renders SkyEd-generated lesson payload data (cards + audio + practice) via shortcode.
- * Version: 0.4.5
+ * Version: 0.4.7
  * Author: Sky Education
  */
 
@@ -18,6 +18,8 @@ class SkyEd_Lesson_Renderer {
     public static function init() : void {
         add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_assets']);
         add_shortcode(self::SHORTCODE, [__CLASS__, 'shortcode']);
+        // Compatible with NG publishing path emitted by run_pipeline.py.
+        add_shortcode('skyed_ng_lesson', [__CLASS__, 'shortcode']);
         add_filter('body_class', [__CLASS__, 'body_class']);
         add_filter('upload_mimes', [__CLASS__, 'allow_payload_mimes'], 10, 2);
         add_filter('wp_check_filetype_and_ext', [__CLASS__, 'fix_payload_filetype'], 10, 5);
@@ -49,7 +51,7 @@ class SkyEd_Lesson_Renderer {
             return $classes;
         }
         global $post;
-        if ($post && isset($post->post_content) && has_shortcode((string)$post->post_content, self::SHORTCODE)) {
+        if ($post && isset($post->post_content) && (has_shortcode((string)$post->post_content, self::SHORTCODE) || has_shortcode((string)$post->post_content, 'skyed_ng_lesson'))) {
             $classes[] = 'skyed-lesson-page';
         }
         return $classes;
@@ -60,7 +62,7 @@ class SkyEd_Lesson_Renderer {
             return false;
         }
         global $post;
-        return (bool)($post && isset($post->post_content) && has_shortcode((string)$post->post_content, self::SHORTCODE));
+        return (bool)($post && isset($post->post_content) && (has_shortcode((string)$post->post_content, self::SHORTCODE) || has_shortcode((string)$post->post_content, 'skyed_ng_lesson')));
     }
 
     public static function enqueue_assets() : void {
@@ -71,7 +73,7 @@ class SkyEd_Lesson_Renderer {
             self::CSS_HANDLE,
             plugins_url('assets/skyed-lesson.css', __FILE__),
             [],
-            '0.4.5'
+            '0.4.6'
         );
         wp_enqueue_style(self::CSS_HANDLE);
     }
@@ -662,7 +664,8 @@ class SkyEd_Lesson_Renderer {
         $count_q      = count($practice_questions);
         $unused_vocab = isset($consistency['vocab_not_seen_in_sentences']) && is_array($consistency['vocab_not_seen_in_sentences']) ? $consistency['vocab_not_seen_in_sentences'] : [];
         $warnings = [];
-        if (!empty($unused_vocab)) {
+        // Teacher-only diagnostic: keep incorrect/irrelevant coverage hints off child pages.
+        if (!empty($unused_vocab) && defined('SKYED_SHOW_TEACHER_WARNINGS') && SKYED_SHOW_TEACHER_WARNINGS) {
             $warnings[] = 'Not yet used in sentences: ' . implode(', ', array_map('esc_html', $unused_vocab));
         }
 
@@ -733,7 +736,7 @@ class SkyEd_Lesson_Renderer {
             <section class="skyed-section skyed-section--practice">
               <div class="skyed-section__head">
                 <div>
-                  <div class="skyed-section__eyebrow"><?php echo $theme === 'sky_tiles' ? 'Listen and tap' : self::esc($practice_family); ?></div>
+                  <div class="skyed-section__eyebrow"><?php echo $theme === 'sky_tiles' ? 'Listen and tap' : ($theme === 'fun_mission' ? 'Mission checkpoint' : ($theme === 'strict_dark' ? 'Study check' : 'Practice')); ?></div>
                   <h2 class="skyed-section__title"><?php echo $theme === 'sky_tiles' ? 'Picture Quiz' : self::esc($practice_title); ?></h2>
                 </div>
                 <div class="skyed-section__note"><?php echo self::esc($copy['practice_note']); ?></div>
@@ -874,7 +877,7 @@ class SkyEd_Lesson_Renderer {
                       if (ch.img) {
                         const im = document.createElement('img');
                         im.src = ch.img;
-                        im.alt = ch.text || ('choice ' + (ci + 1));
+                        im.alt = rendererMode === 'kid_single' ? ('Picture option ' + (ci + 1)) : (ch.text || ('choice ' + (ci + 1)));
                         inner.appendChild(im);
                       }
 
@@ -901,9 +904,14 @@ class SkyEd_Lesson_Renderer {
                       }
 
                       choiceBtn.appendChild(inner);
+                      choiceBtn.setAttribute('aria-label', rendererMode === 'kid_single' ? ('Picture option ' + (ci + 1)) : (ch.text || ('Option ' + (ci + 1))));
                       choiceBtn.onclick = () => {
-                        answers[idx] = ci;
                         const expected = Number(q.answer_index);
+                        if (rendererMode === 'kid_single' && ci !== expected) {
+                          delete answers[idx];
+                        } else {
+                          answers[idx] = ci;
+                        }
                         [...choicesWrap.querySelectorAll('.skyed-choice')].forEach(x => x.classList.remove('active','wrong','correct'));
                         choiceBtn.classList.add('active');
                         updateProgress();
@@ -1012,6 +1020,12 @@ class SkyEd_Lesson_Renderer {
                     resetBtn.textContent = 'Start mission again';
                   }
                   btn.onclick = () => {
+                    const completed = questions.reduce((count, q, idx) => count + ((idx in answers) ? 1 : 0), 0);
+                    if (resultEl) resultEl.setAttribute('role', 'status');
+                    if (rendererMode === 'kid_single' && completed < questions.length) {
+                      if (resultEl) resultEl.textContent = 'Finish all rounds to see your score. ' + completed + ' of ' + questions.length + ' finished.';
+                      return;
+                    }
                     let score = 0;
                     questions.forEach((q, idx) => {
                       if (Number(answers[idx]) === Number(q.answer_index)) score += 1;

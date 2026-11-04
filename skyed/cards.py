@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 import json
 
 from .image_backends import ImageGenRequest, backend_from_env
-from .asset_library import default_asset_library_root, find_loose_file_asset
+from .asset_library import default_asset_library_root, find_loose_file_asset, load_index, normalize_target
 from .prompt_templates import normalize_style
 from .image_specs import ImageSpec, build_specs_from_parsed_spec
 from .image_validation import ImageValidator
@@ -148,18 +148,58 @@ def _local_asset_library_root() -> Path:
     return default_asset_library_root(project_root)
 
 
+def _resolve_existing_library_picture(root: Path, target: str) -> Optional[Path]:
+    """Reuse an approved *exact-target* indexed image, then legacy Pictures/Flashcards.
+
+    The library index already belongs to SkyED; do not introduce a new image
+    database or attempt to generate substitute artwork. Refuse index paths
+    outside the library and records for other types or vocabulary targets.
+    Legacy loose files remain the fallback for installations without an index.
+    """
+    # Keep the caller's lexical Windows path (including possible 8.3 aliases)
+    # for returned paths; resolve only for security containment checks.
+    root = Path(root)
+    resolved_root = root.resolve()
+    target_key = normalize_target(target)
+    if not target_key or target_key == "item":
+        return None
+    indexed = []
+    for rec in load_index(root):
+        if (not rec.approved or str(rec.asset_type).strip().lower() != "vocabulary"
+            or normalize_target(rec.target) != target_key):
+            continue
+        candidate = root / rec.image_relpath
+        if (not candidate.resolve().is_relative_to(resolved_root) or not candidate.is_file()
+            or candidate.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp", ".bmp")):
+            continue
+        indexed.append((rec.asset_id, candidate))
+    # Never silently choose between different indexed illustrations for the
+    # same word without a lesson-specific selection. Use the proven loose
+    # library path where available; otherwise choose a stable sorted record.
+    loose = find_loose_file_asset(root, target=target)
+    # Preserve pre-existing production behavior: Pictures/Flashcards take
+    # priority when present; approved indexed records fill legacy gaps.
+    if loose is not None and loose.is_file() and loose.resolve().is_relative_to(resolved_root):
+        return loose
+    if len(indexed) == 1:
+        return indexed[0][1]
+    if indexed:
+        return sorted(indexed, key=lambda item: (item[0], str(item[1])))[0][1]
+    return None
+
+
 def _materialize_local_asset_png(target: str, out_path: Path) -> Optional[Path]:
     root = _local_asset_library_root()
-    match = find_loose_file_asset(root, target=target)
-    if match is None or not match.exists():
+    match = _resolve_existing_library_picture(root, target)
+    if match is None:
         return None
     try:
-        img = Image.open(match).convert("RGB")
+        with Image.open(match) as source:
+            img = source.convert("RGB")
         _save_png_optimized(img, out_path)
         return match
-    except Exception:
+    except (OSError, ValueError):
         return None
-
 
 def make_flashcard(
     en: str,
@@ -169,57 +209,78 @@ def make_flashcard(
     *,
     ai_image: Optional[Image.Image] = None,
 ) -> None:
-    """A simple vocab flashcard with brand-ish styling.
+    """Create a legible bilingual card with artwork and text in separate regions.
 
-    Important: even if AI image generation fails, we NEVER leave the image panel blank.
+    Keeps the public API and dimensions unchanged (1024 x 768). Unlike the old
+    layout, the text is never painted over an image. Source picture suitability
+    remains subject to the separate illustration-quality release gate.
     """
     W, H = 1024, 768
-    bg = Image.new("RGB", (W, H), (245, 248, 252))
+    bg = Image.new("RGB", (W, H), (244, 248, 253))
     d = ImageDraw.Draw(bg)
+    ink, cyan, muted = (20, 43, 63), (4, 139, 181), (68, 91, 111)
 
-    en_text = (en or "").strip()
-    zh_text = (zh or "").strip()
+    # Accessible, calm header and a clear two-column information hierarchy.
+    d.rounded_rectangle((28, 30, 996, 730), radius=30,
+                        fill=(255, 255, 255), outline=(213, 226, 237), width=3)
+    d.rounded_rectangle((28, 30, 996, 49), radius=9, fill=(9, 176, 207))
+    d.text((60, 91), "SKYED / WORDS", font=_load_font(29, font_path), fill=cyan)
 
-    # soft top ribbon
-    ribbon = Image.new("RGB", (W, 160), (6, 182, 212))
-    ribbon = ribbon.filter(ImageFilter.GaussianBlur(0))
-    bg.paste(ribbon, (0, 0))
+    word = str(en or "").strip()
+    translation = str(zh or "").strip()
+    text_x = 60
+    max_text_width = 262
+    word_size = 77
+    word_font = _load_font(word_size, font_path)
+    while word_size > 31:
+        try:
+            left, top, right, bottom = d.textbbox((0, 0), word, font=word_font)
+            if right - left <= max_text_width:
+                break
+        except Exception:
+            break
+        word_size -= 4
+        word_font = _load_font(word_size, font_path)
+    d.text((text_x, 153), word, font=word_font, fill=ink)
 
-    # image panel
-    panel_x1, panel_y1 = 60, 190
-    panel_x2, panel_y2 = W - 60, H - 60
-    d.rounded_rectangle((panel_x1, panel_y1, panel_x2, panel_y2), radius=32, fill=(255, 255, 255))
+    if translation:
+        trans_size = 51
+        trans_font = _load_font(trans_size, font_path)
+        while trans_size > 28:
+            try:
+                if d.textbbox((0, 0), translation, font=trans_font)[2] <= max_text_width:
+                    break
+            except Exception:
+                break
+            trans_size -= 3
+            trans_font = _load_font(trans_size, font_path)
+        try:
+            d.text((text_x, 255), translation, font=trans_font, fill=(24, 97, 156))
+        except UnicodeError:
+            # On machines without a CJK font, preserve a valid image and rely
+            # on the accessible HTML translation text; never draw tofu text.
+            pass
 
-    img_x1, img_y1 = panel_x1 + 26, panel_y1 + 26
-    img_x2, img_y2 = panel_x2 - 26, panel_y1 + 320
+    d.line((60, 365, 316, 365), fill=(222, 232, 241), width=3)
+    hint_font = _load_font(30, font_path)
+    for row, line in enumerate(("Listen", "Repeat", "Make a sentence")):
+        d.text((text_x, 395 + row * 58), line, font=hint_font, fill=muted)
 
-    d.rounded_rectangle((img_x1, img_y1, img_x2, img_y2), radius=24, fill=(235, 243, 250))
+    # Right picture panel is independent from text, preventing collisions.
+    x1, y1, x2, y2 = 353, 82, 963, 646
+    d.rounded_rectangle((x1 - 10, y1 - 10, x2 + 10, y2 + 10), radius=23,
+                        fill=(235, 245, 252))
+    panel_w, panel_h = x2 - x1, y2 - y1
+    art = (ai_image if ai_image is not None
+           else _make_placeholder_panel(word, panel_w, panel_h, font_path))
+    fitted = _contain_fit(art, panel_w, panel_h, bg=(235, 245, 252))
+    bg.paste(fitted, (x1, y1))
 
-    if ai_image is not None:
-        fitted = _cover_fit(ai_image, img_x2 - img_x1, img_y2 - img_y1)
-        bg.paste(fitted, (img_x1, img_y1))
-    else:
-        ph = _make_placeholder_panel(en_text, img_x2 - img_x1, img_y2 - img_y1, font_path)
-        bg.paste(ph, (img_x1, img_y1))
-
-    f_hint = _load_font(28, font_path)
-    f_en = _load_font(78, font_path)
-    f_zh = _load_font(56, font_path)
-    f_small = _load_font(30, font_path)
-
-    d.text((panel_x1 + 34, panel_y1 + 34), "WORD", fill=(2, 132, 199), font=f_hint)
-
-    d.text((panel_x1 + 34, panel_y1 + 78), en_text, fill=(15, 23, 42), font=f_en)
-    if zh_text:
-        d.text((panel_x1 + 34, panel_y1 + 175), zh_text, fill=(30, 64, 175), font=f_zh)
-
-    hint = "Say it 2 times + make 1 full sentence."
-    d.text((panel_x1 + 34, panel_y2 - 54), hint, fill=(100, 116, 139), font=f_small)
-
+    d.text((60, 676), "Look  •  Listen  •  Say it", fill=ink,
+           font=_load_font(29, font_path))
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     _save_png_optimized(bg, out_path)
-
 
 def _normalize_vocab(spec: Dict[str, Any]) -> List[Dict[str, str]]:
     vocab = spec.get("vocab", []) if isinstance(spec, dict) else []
