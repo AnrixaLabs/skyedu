@@ -1,39 +1,28 @@
 {
-  "automatic_publication": false,
-  "historical_expected_media": {
-    "mp3": 342,
-    "png": 91,
-    "total": 433
+  "version": "2.4.0",
+  "scope": "Course Hub Bright UI stage and Control Panel integration",
+  "stage": "STAGED_NOT_DEPLOYED",
+  "legacy_source_files_preserved": 442,
+  "media_preserved": {
+    "audio": 342,
+    "images": 91
   },
-  "milestone": "course-hub-stage-integration",
-  "new_lobby_public_path_in_local_stage": "/lobby-preview/",
-  "production_mutation": false,
-  "protected_sites": [
-    "skyed.org",
-    "portal.skyed.org",
-    "growth.skyed.org",
-    "anrixa.com",
-    "skyedu.cn"
+  "source_backed_lessons": 11,
+  "source_groups": 5,
+  "new_visual_assets": 18,
+  "new_ui_routes": [
+    "discover",
+    "programs",
+    "lessons",
+    "saved",
+    "program",
+    "lesson"
   ],
-  "reason_not_published": "Pilot catalog published:false; formal teacher approval, server recency/identity gate and separate production deployment authorization pending.",
-  "requires_capture": false,
-  "requires_current_host_identity_check": true,
-  "requires_lesson_mapping": false,
-  "requires_teacher_review": true,
-  "source_of_truth": "user-provided read-only capture of course.skyed.org/current, snapshot-20261104-163523; remote identity not independently revalidated",
-  "source_reconciliation": {
-    "captured_legacy_file_count": 442,
-    "original_files_mutated": false,
-    "route_qualification": "VERIFIED_CAPTURED_ROUTES_TEACHER_REVIEW_PENDING",
-    "site_deployment": false,
-    "source_capture": "SkyED-CourseHub-Integration.zip, snapshot-20261104-163523",
-    "source_catalog_sha256": "115c6359ef8383250286e978146ec024178928674e5623f7b6b0217d3f00e5fd",
-    "source_content_sha256": "d8e9f145974359a7f62de65dd7133c68192d2e24bd1ea5f3766c4440fd04bf39",
-    "teacher_review_signed": false,
-    "technical_route_mapping_count": 11,
-    "verified_audio": 342,
-    "verified_images": 91
-  },
-  "status": "SNAPSHOT_RECONCILED_11_ROUTES_STAGE_ONLY_NO_PUBLICATION",
-  "version": "2.3.3"
+  "editor_preserves_user_draft": true,
+  "teacher_review": "PENDING",
+  "published": false,
+  "production_change": false,
+  "current_live_server_revalidated": false,
+  "real_media_playback_device_qa": "PENDING",
+  "visual_browser_qa": "IN_CI"
 }

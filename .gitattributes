@@ -38,3 +38,15 @@ scripts/validate_lobby_content_v233.py text eol=lf
 scripts/package_control_panel_v233.py text eol=lf
 tests/test_install_v233.py text eol=lf
 tests/test_pilot_route_reconciliation.py text eol=lf
+
+# SkyED Bright Course Hub v2.4.0; verify consistent cross-platform package bytes.
+docs/VISUAL-IDENTITY-v2.4.0.md text eol=lf
+scripts/Install-SkyED-ControlPanel-v2.4.0.ps1 text eol=lf
+scripts/Start-SkyED-CourseHub-Integration-v2.4.0.ps1 text eol=lf
+scripts/validate_lobby_content_v240.py text eol=lf
+scripts/package_control_panel_v240.py text eol=lf
+tests/test_visual_v240.py text eol=lf
+tests/test_install_v240.py text eol=lf
+skyed_lobby/tests/test_visual_browser_v240.py text eol=lf
+.github/workflows/skyed-bright-coursehub-v240.yml text eol=lf
+skyed_lobby/site/assets/illustrations/*.webp -text
