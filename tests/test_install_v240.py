@@ -15,7 +15,10 @@ class CompleteRelease(unittest.TestCase):
     def test_allowlisted_complete_successor(self):
         self.assertEqual(len(P.MEMBERS),55)
         self.assertEqual(len(P.ILLUSTRATIONS),18)
-        self.assertTrue(all((ROOT / name).is_file() for name in P.MEMBERS))
+        # The on-disk application intentionally excludes release-only docs;
+        # require every executable and visual asset both in CI and after install.
+        runtime = (name for name in P.MEMBERS if not name.startswith('docs/'))
+        self.assertTrue(all((ROOT / name).is_file() for name in runtime))
         self.assertTrue((ROOT/'scripts/Install-SkyED-ControlPanel-v2.3.3.ps1').is_file())
         self.assertTrue((ROOT/'tests/test_course_hub_integration.py').is_file())
 

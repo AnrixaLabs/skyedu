@@ -34,6 +34,23 @@ class VisualSourceContract(unittest.TestCase):
         self.assertEqual(len(safe), 23)
         self.assertFalse(any('tools/' in item[0] or 'control_server.py' in item[0] for item in safe))
 
+    def test_legacy_lobby_without_bright_artwork_still_stages(self):
+        """Existing v2.3.x packages retain their original staging contract."""
+        with tempfile.TemporaryDirectory() as temp:
+            clone = Path(temp) / 'legacy-lobby'
+            copytree(LOBBY, clone)
+            for path in (clone / 'assets/illustrations').glob('*.webp'):
+                path.unlink()
+            self.assertEqual(len(mod.safe_tree_for_lobby(clone)), 5)
+
+    def test_incomplete_bright_artwork_blocks_stage(self):
+        with tempfile.TemporaryDirectory() as temp:
+            clone = Path(temp) / 'partial-lobby'
+            copytree(LOBBY, clone)
+            (clone / 'assets/illustrations/topic-01.webp').unlink()
+            with self.assertRaisesRegex(mod.GateError, 'Bright lobby illustrations missing'):
+                mod.safe_tree_for_lobby(clone)
+
     def test_secure_local_app_contract(self):
         app = (LOBBY/'assets/app.js').read_text(encoding='utf-8')
         index = (LOBBY/'index.html').read_text(encoding='utf-8')

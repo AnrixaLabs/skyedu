@@ -421,8 +421,15 @@ def safe_tree_for_lobby(root: Path):
         if rel not in allowed and rel not in allowed_illustrations and not (rel.startswith("assets/media/") and file.suffix.lower() in MEDIA_SUFFIXES):
             raise GateError("Unexpected lobby file in public stage: " + rel)
         items.append((rel,file,file.stat().st_size,digest(file)))
-    if not (allowed | allowed_illustrations).issubset({r for r,*_ in items}):
+    included = {rel for rel, *_ in items}
+    if not allowed.issubset(included):
         raise GateError("Required lobby frontend member missing")
+    # The original v2.3.x Course Hub packages have only the five essential
+    # frontend files. Keep those previous stage builds usable. For a Bright
+    # stage, artwork is an indivisible bundle: never stage a partial set.
+    provided_illustrations = included & allowed_illustrations
+    if provided_illustrations and provided_illustrations != allowed_illustrations:
+        raise GateError("Required Bright lobby illustrations missing")
     return items
 
 
