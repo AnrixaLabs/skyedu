@@ -21,7 +21,7 @@ import sys
 import tempfile
 from urllib.parse import unquote, urlsplit, quote
 
-RELEASE = "2.3.3"
+RELEASE = "2.4.0"
 PREVIEW_DIR = "lobby-preview"
 STATIC_SUFFIXES = {".html", ".htm", ".css", ".js", ".json", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".mp3", ".wav", ".ogg", ".m4a", ".txt", ".webmanifest", ".woff2"}
 MEDIA_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".mp3", ".wav", ".ogg", ".m4a"}
@@ -403,6 +403,10 @@ def stage(source: Path, lobby: Path, output: Path, min_media: int = 400) -> dict
 
 def safe_tree_for_lobby(root: Path):
     allowed = {"index.html", "assets/app.js", "assets/styles.css", "assets/favicon.svg", "content/lobby.json"}
+    allowed_illustrations = {f"assets/illustrations/{name}.webp" for name in (
+        "hero-art", "program-art", "lesson-art", *(f"path-{i}" for i in range(1, 6)),
+        *(f"topic-{i:02d}" for i in range(1, 11)),
+    )}
     items=[]
     for file in sorted(root.rglob("*")):
         if file.is_dir():
@@ -414,10 +418,10 @@ def safe_tree_for_lobby(root: Path):
             raise GateError("Unsafe lobby member")
         if rel == "assets/media/README.txt":
             continue  # Internal design guidance, not a website asset.
-        if rel not in allowed and not (rel.startswith("assets/media/") and file.suffix.lower() in MEDIA_SUFFIXES):
+        if rel not in allowed and rel not in allowed_illustrations and not (rel.startswith("assets/media/") and file.suffix.lower() in MEDIA_SUFFIXES):
             raise GateError("Unexpected lobby file in public stage: " + rel)
         items.append((rel,file,file.stat().st_size,digest(file)))
-    if not allowed.issubset({r for r,*_ in items}):
+    if not (allowed | allowed_illustrations).issubset({r for r,*_ in items}):
         raise GateError("Required lobby frontend member missing")
     return items
 

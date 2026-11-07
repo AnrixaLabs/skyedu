@@ -88,7 +88,7 @@ class IntegrationWorkspace(QtWidgets.QDialog):
         self.status.setWordWrap(True)
         content.addWidget(self.status)
         layout.addWidget(stage_box)
-        warn = QtWidgets.QLabel("Release gate: 400+ existing media files, 11 draft lesson placeholders, no existing file changes. "
+        warn = QtWidgets.QLabel("Release gate: 400+ existing media files, 11 source-backed pilot lesson links, no original file changes. "
             "Publication remains disabled until lesson links and live routes are verified.")
         warn.setWordWrap(True)
         warn.setStyleSheet("color:#ad6a00;font-weight:650;")
@@ -180,7 +180,7 @@ class IntegrationWorkspace(QtWidgets.QDialog):
     def _copy_capture_command(self):
         cmd = (
             'powershell.exe -NoProfile -ExecutionPolicy Bypass '
-            f'-File "{self.root / "scripts" / "Start-SkyED-CourseHub-Integration-v2.3.3.ps1"}" '
+            f'-File "{self.root / "scripts" / "Start-SkyED-CourseHub-Integration-v2.4.0.ps1"}" '
             f'-ProjectRoot "{self.root}" -Mode CaptureAndStage'
         )
         QtWidgets.QApplication.clipboard().setText(cmd)

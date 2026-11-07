@@ -1,0 +1,176 @@
+name: SkyED Bright Course Hub v2.4.0
+
+on:
+  push:
+    branches:
+      - feature/coursehub-bright-v240
+      - feature/homework-automation-v2
+    paths:
+      - 'skyed_lobby/site/**'
+      - 'skyed_lobby/tests/**'
+      - 'skyed_control/**'
+      - 'skyed_control_panel.py'
+      - 'scripts/course_hub_integration.py'
+      - 'scripts/*v240*'
+      - 'tests/*v240*'
+      - '.github/workflows/skyed-bright-coursehub-v240.yml'
+      - '.gitattributes'
+  pull_request:
+    branches:
+      - feature/homework-automation-v2
+    paths:
+      - 'skyed_lobby/site/**'
+      - 'skyed_lobby/tests/**'
+      - 'skyed_control/**'
+      - 'skyed_control_panel.py'
+      - 'scripts/course_hub_integration.py'
+      - 'scripts/*v240*'
+      - 'tests/*v240*'
+      - '.github/workflows/skyed-bright-coursehub-v240.yml'
+      - '.gitattributes'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: skyed-bright-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-package-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify all existing and successor tests
+        run: |
+          python -m unittest discover -s skyed_lobby/tests -p 'test_control_lobby.py' -v
+          python -m unittest discover -s tests -p 'test_course_hub_integration.py' -v
+          python -m unittest discover -s tests -p 'test_pilot_route_reconciliation.py' -v
+          python -m unittest discover -s tests -p 'test_install_v233.py' -v
+          python -m unittest discover -s tests -p 'test_visual_v240.py' -v
+          python -m unittest discover -s tests -p 'test_install_v240.py' -v
+          python -m compileall -q skyed_control skyed_lobby scripts skyed_control_panel.py
+      - name: Verify client JS syntax without external packages
+        run: |
+          node --check skyed_lobby/site/assets/app.js
+          node --check skyed_lobby/tools/editor.js
+      - name: Build complete reproducible overlay
+        run: |
+          python scripts/package_control_panel_v240.py --out dist/SkyED-ControlPanel-Bright-v2.4.0.zip
+          python scripts/package_control_panel_v240.py --out dist/compare.zip
+          python -c "from pathlib import Path; import hashlib; a=Path('dist/SkyED-ControlPanel-Bright-v2.4.0.zip').read_bytes(); b=Path('dist/compare.zip').read_bytes(); assert a==b; print('SKYED_V240_REPRODUCIBLE_SHA256='+hashlib.sha256(a).hexdigest())"
+      - name: Publish exact verified overlay
+        uses: actions/upload-artifact@v4
+        with:
+          name: SkyED-ControlPanel-Bright-v2.4.0
+          path: dist/SkyED-ControlPanel-Bright-v2.4.0.zip
+          if-no-files-found: error
+          retention-days: 60
+
+  windows-powershell-installer:
+    runs-on: windows-latest
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Parse Windows PowerShell 5.1 installer
+        shell: powershell
+        run: |
+          $errors = $null; $tokens = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'scripts/Install-SkyED-ControlPanel-v2.4.0.ps1'),
+            [ref]$tokens,[ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          Write-Host 'SKYED_V240_POWERSHELL51_PARSER=PASS'
+      - name: Install native Qt for real smoke tests
+        run: python -m pip install "PySide6>=6.7,<7"
+      - name: Run real installer and preserve editable user content
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python scripts/package_control_panel_v240.py --out dist/SkyED-ControlPanel-Bright-v2.4.0.zip
+          if ($LASTEXITCODE -ne 0) { throw 'SKYED_V240_PACKAGE_FAILED' }
+          $unpacked = Join-Path $env:RUNNER_TEMP 'skyed-v240-release'
+          Expand-Archive -LiteralPath 'dist/SkyED-ControlPanel-Bright-v2.4.0.zip' -DestinationPath $unpacked
+          $source = Join-Path $unpacked 'SkyED-ControlPanel-Bright-v2.4.0'
+          $install = Join-Path $source 'scripts/Install-SkyED-ControlPanel-v2.4.0.ps1'
+          $project = Join-Path $env:RUNNER_TEMP 'skyed-v240-existing-project'
+          New-Item -ItemType Directory -Path $project -Force | Out-Null
+          Set-Content -LiteralPath (Join-Path $project 'pyside_gui.py') -Value '# existing preserved GUI' -Encoding ASCII
+          Set-Content -LiteralPath (Join-Path $project 'run_pipeline.py') -Value '# existing preserved automation' -Encoding ASCII
+          python -m venv --system-site-packages (Join-Path $project '.venv')
+          if ($LASTEXITCODE -ne 0) { throw 'SKYED_V240_FAKE_VENV_FAILED' }
+          $draft = Join-Path $project 'skyed_lobby/site/content/lobby.json'
+          New-Item -ItemType Directory -Path (Split-Path -Parent $draft) -Force | Out-Null
+          Copy-Item -LiteralPath (Join-Path $source 'skyed_lobby/site/content/lobby.json') -Destination $draft
+          $before = (Get-FileHash $draft -Algorithm SHA256).Hash
+          $stdout = Join-Path $env:RUNNER_TEMP 'v240-success-stdout.txt'
+          $stderr = Join-Path $env:RUNNER_TEMP 'v240-success-stderr.txt'
+          $process = Start-Process -FilePath 'powershell.exe' -ArgumentList @(
+            '-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + $install + '"'),
+            '-SourceRoot',('"' + $source + '"'),'-ProjectRoot',('"' + $project + '"'),'-SkipShortcuts'
+          ) -Wait -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          $log = (Get-Content -LiteralPath $stdout -Raw) + "`n" + (Get-Content -LiteralPath $stderr -Raw)
+          Write-Host $log
+          if ($process.ExitCode -ne 0 -or $log -notmatch 'SKYED_V240_INSTALL=PASS') { throw 'SKYED_V240_REAL_WINDOWS_INSTALL_FAILED' }
+          if ($log -notmatch 'SKYED_V240_LOCAL_QA=PASS') { throw 'SKYED_V240_LOCAL_QA_MISSING' }
+          if ((Get-FileHash $draft -Algorithm SHA256).Hash -ne $before) { throw 'SKYED_V240_DRAFT_OVERWRITTEN' }
+          $art = Join-Path $project 'skyed_lobby/site/assets/illustrations/hero-art.webp'
+          if (-not (Test-Path $art -PathType Leaf)) { throw 'SKYED_V240_VISUAL_ASSETS_MISSING' }
+          if (-not (Test-Path (Join-Path $project 'scripts/Start-SkyED-CourseHub-Integration-v2.4.0.ps1'))) { throw 'SKYED_V240_STAGING_ENTRYPOINT_MISSING' }
+          Write-Host 'SKYED_V240_REAL_WINDOWS_INSTALL_AND_DRAFT_PRESERVATION=PASS'
+          # Invalid edited JSON must fail closed BEFORE replacing the GUI.
+          $bad = Join-Path $env:RUNNER_TEMP 'skyed-v240-invalid-project'
+          New-Item -ItemType Directory -Path $bad -Force | Out-Null
+          Set-Content -LiteralPath (Join-Path $bad 'pyside_gui.py') -Value '# untouched GUI' -Encoding ASCII
+          Set-Content -LiteralPath (Join-Path $bad 'run_pipeline.py') -Value '# untouched pipeline' -Encoding ASCII
+          python -m venv --system-site-packages (Join-Path $bad '.venv')
+          $badDraft = Join-Path $bad 'skyed_lobby/site/content/lobby.json'
+          New-Item -ItemType Directory -Path (Split-Path -Parent $badDraft) -Force | Out-Null
+          Set-Content -LiteralPath $badDraft -Value '{invalid-json' -Encoding UTF8
+          $oldHash = (Get-FileHash $badDraft -Algorithm SHA256).Hash
+          $badOutput = Join-Path $env:RUNNER_TEMP 'v240-bad-output.txt'
+          $badError = Join-Path $env:RUNNER_TEMP 'v240-bad-error.txt'
+          $badProcess = Start-Process -FilePath 'powershell.exe' -ArgumentList @(
+            '-NoProfile','-ExecutionPolicy','Bypass','-File',('"' + $install + '"'),
+            '-SourceRoot',('"' + $source + '"'),'-ProjectRoot',('"' + $bad + '"'),'-SkipShortcuts'
+          ) -Wait -PassThru -RedirectStandardOutput $badOutput -RedirectStandardError $badError
+          if ($badProcess.ExitCode -eq 0) { throw 'SKYED_V240_INVALID_DRAFT_ACCEPTED' }
+          if (Test-Path (Join-Path $bad 'skyed_control_panel.py')) { throw 'SKYED_V240_BAD_DRAFT_OVERWROTE_GUI' }
+          if ((Get-FileHash $badDraft -Algorithm SHA256).Hash -ne $oldHash) { throw 'SKYED_V240_BAD_DRAFT_MUTATED' }
+          Write-Host 'SKYED_V240_INVALID_DRAFT_FAIL_CLOSED=PASS'
+
+  chromium-learning-journey:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install real headless Chromium and Playwright
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y chromium >/dev/null
+          python -m pip install playwright
+      - name: Run real UI interaction suite on desktop and mobile
+        env:
+          SKYED_VISUAL_BROWSER: '1'
+          SKYED_RUN_BROWSER_TESTS: '1'
+        run: |
+          python -m unittest discover -s skyed_lobby/tests -p 'test_visual_browser_v240.py' -v
+          python -m unittest discover -s skyed_lobby/tests -p 'test_browser_lobby.py' -v

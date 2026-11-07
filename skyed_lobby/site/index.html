@@ -2,77 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#f8f8f3">
-  <meta name="description" content="Sky Education learning programs and course library">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
-  <title>Sky Education | Course Hub</title>
+  <meta name="theme-color" content="#1689e4">
+  <meta name="description" content="SkyED Course Hub · Bright bilingual English learning with original lessons and audio.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'">
+  <title>SkyED · Course Hub</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="assets/styles.css">
   <script src="assets/app.js" defer></script>
 </head>
 <body>
-  <svg aria-hidden="true" class="sprite" xmlns="http://www.w3.org/2000/svg">
-    <symbol id="icon-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.7 8.3-2.4 5-5 2.4 2.4-5z"/></symbol>
-    <symbol id="icon-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
-    <symbol id="icon-book" viewBox="0 0 24 24"><path d="M12 6.6C9 4.4 6 4 3 4v14c3 0 6 .4 9 2.5C15 18.4 18 18 21 18V4c-3 0-6 .4-9 2.6zM12 6.6v13.9"/></symbol>
-    <symbol id="icon-bookmark" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4z"/></symbol>
-    <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.7"/><path d="m16 16 5 5"/></symbol>
-    <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
-    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></symbol>
-    <symbol id="icon-sparkles" viewBox="0 0 24 24"><path d="m12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5z"/></symbol>
-    <symbol id="icon-chat" viewBox="0 0 24 24"><path d="M4 4h16v12H9l-5 4z"/><path d="M8 9h8m-8 4h5"/></symbol>
-    <symbol id="icon-shapes" viewBox="0 0 24 24"><circle cx="7.5" cy="7.5" r="5"/><path d="M13 12h9v9h-9z"/></symbol>
-    <symbol id="icon-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
-    <symbol id="icon-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
-    <symbol id="icon-close" viewBox="0 0 24 24"><path d="M5 5 19 19M19 5 5 19"/></symbol>
-    <symbol id="icon-filter" viewBox="0 0 24 24"><path d="M4 7h16M7 12h10M10 17h4"/></symbol>
-    <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
-    <symbol id="icon-list" viewBox="0 0 24 24"><path d="M4 6h2m3 0h11M4 12h2m3 0h11M4 18h2m3 0h11"/></symbol>
-    <symbol id="icon-heart" viewBox="0 0 24 24"><path d="M20 5a5 5 0 0 0-7 0l-1 1-1-1a5 5 0 0 0-7 7l8 8 8-8a5 5 0 0 0 0-7z"/></symbol>
-    <symbol id="icon-language" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-5 5-5 13 0 18m0-18c5 5 5 13 0 18"/></symbol>
-    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
-  </svg>
-
-  <div class="app-shell" id="app-shell">
-    <aside class="sidebar" id="sidebar" aria-label="Main navigation">
-      <a class="brand" href="#/discover" aria-label="Sky Education — Home">
-        <span class="brand-mark"><span class="brand-star">✳</span></span>
-        <span><span class="brand-name" id="brand-name">skyed<span class="brand-dot">.</span></span><span class="brand-caption" id="brand-caption">COURSE HUB</span></span>
-      </a>
-      <div class="side-label">YOUR LEARNING SPACE</div>
-      <nav class="side-nav" id="side-nav" aria-label="Explore"></nav>
-      <div class="side-spacer"></div>
-      <section class="sidebar-bottom">
-        <div class="side-note">
-          <span class="side-note-spark">✳</span>
-          <strong>A space to grow</strong>
-          <p>Made for curious minds and everyday discoveries.</p>
-        </div>
-        <a class="back-current" id="back-current" href="/">← <span>Current Course Hub</span></a>
-        <div class="sidebar-footer" id="sidebar-footer">Sky Education · Course Hub</div>
-      </section>
-    </aside>
-    <div class="backdrop" id="backdrop" hidden></div>
-    <div class="content-shell">
-      <header class="topbar">
-        <button class="icon-button hamburger" id="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false"><svg><use href="#icon-menu"></use></svg></button>
-        <div class="breadcrumbs"><span class="breadcrumb-home">Sky Education</span><svg><use href="#icon-chevron"></use></svg><span id="breadcrumb-current">Discover</span></div>
-        <div class="top-actions">
-          <label class="search-box" for="global-search"><svg><use href="#icon-search"></use></svg><input id="global-search" autocomplete="off" type="search" placeholder="Search courses, topics, lessons..." aria-label="Search lessons and programs"><kbd>/</kbd></label>
-          <button class="language-toggle" id="language-toggle" type="button" aria-label="Change language"><svg><use href="#icon-language"></use></svg><span id="language-label">EN</span></button>
-          <span class="avatar" aria-label="Sky Education">S</span>
-        </div>
-      </header>
-      <main id="main" tabindex="-1">
-        <div id="loading" class="loading" role="status">Loading learning space…</div>
-      </main>
-      <footer class="site-footer"><span id="footer-copy">Sky Education · Course Hub</span><span>Built for learning <span aria-hidden="true">✳</span></span></footer>
-    </div>
-  </div>
-  <div class="toast-region" id="toast-region" role="status" aria-live="polite"></div>
-  <dialog id="detail-dialog" class="detail-dialog" aria-labelledby="detail-title"><div id="detail-content"></div></dialog>
-  <template id="fatal-template"><section class="fatal"><h1>We couldn’t load the learning space.</h1><p>Start the local preview server and check that <code>content/lobby.json</code> is present and valid.</p><button type="button" id="retry-button">Try again</button></section></template>
+<svg xmlns="http://www.w3.org/2000/svg" class="symbols" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6c-3-2-6-2-10-1v15c4-1 7-1 10 1 3-2 6-2 10-1V5c-4-1-7-1-10 1zm0 0v15"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M20.7 5.5a5.4 5.4 0 0 0-7.6 0L12 6.6l-1.1-1.1a5.4 5.4 0 0 0-7.6 7.6L12 22l8.7-8.9a5.4 5.4 0 0 0 0-7.6z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-7-7 7 7-7 7"/></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M3 9h4l5-5v16l-5-5H3zM16 9c2 2 2 4 0 6m3-9c4 3 4 9 0 12"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 12 7-12 7z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5 19 19M19 5 5 19"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+  <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 13V11a8 8 0 0 1 16 0v2M4 13H2v7h5v-7zm16 0h2v7h-5v-7z"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 11a7 7 0 0 0 14 0m-7 7v4m-4 0h8"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 2 3.2 6.4 7.1 1-5.1 5 .9 7.1-6.1-3.3-6.1 3.3.9-7.1-5.1-5 7.1-1z"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 6-10 6L2 8zm-10 11 10 6 10-6m-20 5 10 5 10-5"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2c-7 6-7 14 0 20M12 2c7 6 7 14 0 20"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 2 8 4v6c0 5-4 8-8 10-4-2-8-5-8-10V6z"/><path d="m8 12 3 3 5-6"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M4 11a8 8 0 0 1 14-5l2 2m0-6v6h-6M20 13a8 8 0 0 1-14 5l-2-2m0 6v-6h6"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 1v22M1 12h22M4 4l16 16M20 4 4 20"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="12" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+</svg>
+<div id="app-shell">
+ <div id="backdrop" hidden></div>
+ <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
+  <a class="brand" href="#/discover" aria-label="SkyED home"><span class="brand-orbit"><svg><use href="#i-spark"/></svg></span><span class="brand-text"><strong>skyed<span class="brand-dot">.</span></strong><small>COURSE HUB</small></span></a>
+  <div class="nav-title" data-i18n="learningSpace">YOUR LEARNING SPACE</div>
+  <nav id="side-nav" class="side-nav"></nav>
+  <div class="sidebar-bottom"><div class="grow-card"><span class="grow-icon">✦</span><h3 data-i18n="growTitle">A space to grow in English</h3><p data-i18n="growText">Real lessons. Bright discoveries. Your pace.</p></div><p class="studio-caption" id="lobby-studio-title"></p><a href="/" class="back-link"><span aria-hidden="true">←</span><span data-i18n="originalHub">Current Course Hub</span></a></div>
+ </aside>
+ <div class="workspace">
+  <header class="topbar"><div class="top-left"><button class="icon-btn mobile-menu" id="menu-toggle" aria-label="Open navigation" aria-expanded="false"><svg class="icon"><use href="#i-menu"/></svg></button><div class="breadcrumb" id="breadcrumb"></div></div><div class="top-right"><label class="search-box"><svg class="icon"><use href="#i-search"/></svg><input id="global-search" type="search" maxlength="120" autocomplete="off" placeholder="Search lessons, topics or programs" aria-label="Search lessons"></label><button class="language-btn" id="language-toggle" aria-label="Switch English and Chinese"><span id="language-label">EN</span><span>中文</span></button><span class="avatar" aria-hidden="true">S</span></div></header>
+  <main id="main" tabindex="-1"><div class="loading"><span class="loading-star">✦</span> Loading Course Hub…</div></main>
+  <footer class="site-footer"><span>© Sky Education · Course Hub</span><span id="status-footer">Private preview · No publication or accounts</span></footer>
+ </div>
+</div>
+<div id="toast" aria-live="polite" class="toast" role="status"></div>
 </body>
 </html>
