@@ -11,3 +11,9 @@
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
 
 .studio-caption{font-size:10px;color:#8b9bb3;margin:15px 5px 1px;line-height:1.4}
+
+/* v2.5 high-density media: 1280px sources, no upscaled 200px tiles. */
+.program-card img{height:68%;width:66%;object-fit:cover;object-position:70% center}
+.unit-cover img{height:55%;width:70%;object-fit:cover;object-position:80% center}
+.lesson-image img{image-rendering:auto;object-fit:cover;object-position:72% center}
+@media(min-width:1300px){.lesson-image{height:145px}}

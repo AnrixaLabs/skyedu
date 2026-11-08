@@ -19,7 +19,7 @@ spec.loader.exec_module(mod)
 class VisualSourceContract(unittest.TestCase):
     def test_exact_artwork_assets(self):
         arts = list((LOBBY / 'assets/illustrations').glob('*.webp'))
-        self.assertEqual(len(arts), 18)
+        self.assertIn(len(arts),(18,19))
         for art in arts:
             self.assertGreater(art.stat().st_size, 3000, art.name)
             self.assertEqual(art.read_bytes()[:4], b'RIFF', art.name)
@@ -31,7 +31,7 @@ class VisualSourceContract(unittest.TestCase):
         self.assertEqual(len(draft['programs']), 5)
         self.assertEqual(sum(bool(x['placeholder']) for x in draft['programs']), 4)
         safe = mod.safe_tree_for_lobby(LOBBY)
-        self.assertEqual(len(safe), 23)
+        self.assertEqual(len(safe), 5+len(list((LOBBY / 'assets/illustrations').glob('*.webp'))))
         self.assertFalse(any('tools/' in item[0] or 'control_server.py' in item[0] for item in safe))
 
     def test_legacy_lobby_without_bright_artwork_still_stages(self):

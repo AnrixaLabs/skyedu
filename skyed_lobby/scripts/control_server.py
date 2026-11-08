@@ -13,6 +13,8 @@ import os
 from pathlib import Path
 import re
 import shutil
+import struct
+import zlib
 import tempfile
 from urllib.parse import unquote, urlsplit
 
@@ -22,6 +24,7 @@ ALLOWED_URL_HOSTS = frozenset({"skyed.org", "course.skyed.org"})
 SAFE_MEDIA = re.compile(r"^assets/media/[a-zA-Z0-9_/-]+\.(?:png|jpe?g|webp|svg)$")
 SAFE_ID = re.compile(r"^[a-z0-9-]+$")
 MAX_CONTENT = 1024 * 1024
+MAX_UPLOAD = 12 * 1024 * 1024
 
 
 def validate_content(doc: object) -> dict:
@@ -111,6 +114,65 @@ def save_content(doc: object, root: Path = ROOT) -> Path:
     return target
 
 
+def inspect_image(data: bytes, kind: str) -> tuple[str, int, int]:
+    """Fail closed on unsupported/broken images; never accept SVG/HTML.
+
+    PNG has a verified IHDR CRC, JPEG SOF dimensions, WebP container limits.
+    A decoded-image QA step is still recommended for externally sourced assets.
+    """
+    if len(data) < 32 or len(data) > MAX_UPLOAD:
+        raise ValueError('Image size exceeds safe limits')
+    if kind == 'image/png':
+        if data[:8] != b'\x89PNG\r\n\x1a\n' or data[12:16] != b'IHDR':
+            raise ValueError('Not a PNG image')
+        width, height = struct.unpack('>II', data[16:24])
+        if zlib.crc32(data[12:29]) & 0xffffffff != struct.unpack('>I',data[29:33])[0]:
+            raise ValueError('PNG image header CRC mismatch')
+        ext = '.png'
+    elif kind == 'image/webp':
+        if data[:4]!=b'RIFF' or data[8:12]!=b'WEBP' or int.from_bytes(data[4:8],'little')+8 != len(data):
+            raise ValueError('Not a valid WebP container')
+        t=data[12:16]
+        if t==b'VP8X':
+            width=1+int.from_bytes(data[24:27],'little')
+            height=1+int.from_bytes(data[27:30],'little')
+        elif t==b'VP8 ' and data[23:26]==b'\x9d\x01\x2a':
+            width=int.from_bytes(data[26:28],'little')&0x3fff
+            height=int.from_bytes(data[28:30],'little')&0x3fff
+        elif t==b'VP8L' and data[20]==0x2f:
+            val=int.from_bytes(data[21:25],'little')
+            width=(val&0x3fff)+1
+            height=((val>>14)&0x3fff)+1
+        else: raise ValueError('Unsupported WebP image format')
+        ext='.webp'
+    else: raise ValueError('Only high-quality PNG or WebP is supported')
+    if width<800 or height<500 or width>8000 or height>8000 or width*height>30_000_000:
+        raise ValueError('Tile image must be at least 800x500 pixels and within safe dimensions')
+    return ext,width,height
+
+
+def store_image(data: bytes, kind: str, root: Path = ROOT) -> dict:
+    ext,width,height=inspect_image(data,kind)
+    folder=root/'site'/'assets'/'media'/'uploads'
+    # Ignore symlinks in every directory component including the media root.
+    for part in (root/'site',root/'site'/'assets',root/'site'/'assets'/'media',folder):
+        if part.is_symlink():raise ValueError('Unsafe upload directory')
+    folder.mkdir(parents=True,exist_ok=True)
+    digest=hashlib.sha256(data).hexdigest()
+    filename='cover-'+digest[:32]+ext
+    target=folder/filename
+    if target.is_symlink():raise ValueError('Unsafe upload destination')
+    if target.exists():
+        if hashlib.sha256(target.read_bytes()).hexdigest()!=digest:
+            raise ValueError('Uploaded file digest collision')
+    else:
+        with tempfile.NamedTemporaryFile(dir=folder,delete=False) as tmp:
+            temp=Path(tmp.name);tmp.write(data);tmp.flush();os.fsync(tmp.fileno())
+        try:os.replace(temp,target)
+        finally:temp.unlink(missing_ok=True)
+    return {'path':'assets/media/uploads/'+filename,'sha256':digest,'width':width,'height':height}
+
+
 class Server(http.server.ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
@@ -195,22 +257,35 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def do_POST(self):
-        if not self._allowed_origin() or urlsplit(self.path).path != "/api/save-content":
+        path=urlsplit(self.path).path
+        if not self._allowed_origin() or path not in ('/api/save-content','/api/upload-image'):
             self.send_error(403)
             return
         if self.headers.get("X-SkyED-Editor-Token", "") != self.server.editor_token:
             self._json(403, {"error": "Editor session is invalid"})
             return
-        if self.headers.get("Content-Type", "").split(";")[0].strip().lower() != "application/json":
+        kind=self.headers.get("Content-Type", "").split(";")[0].strip().lower()
+        if path == '/api/save-content' and kind != 'application/json':
             self._json(415, {"error": "Expected application/json"})
+            return
+        if path == '/api/upload-image' and kind not in ('image/png','image/webp'):
+            self._json(415, {"error": "Upload a PNG or WebP image"})
             return
         try:
             length = int(self.headers.get("Content-Length", ""))
         except ValueError:
             self._json(411, {"error": "Missing Content-Length"})
             return
-        if length <= 0 or length > MAX_CONTENT:
+        if length <= 0 or length > (MAX_UPLOAD if path=='/api/upload-image' else MAX_CONTENT):
             self._json(413, {"error": "Invalid content length"})
+            return
+        if path=='/api/upload-image':
+            try:
+                saved=store_image(self.rfile.read(length),kind,self.server.root)
+            except (ValueError,OSError) as exc:
+                self._json(400,{"error":str(exc)[:160]})
+                return
+            self._json(200,{"uploaded":True,**saved})
             return
         try:
             doc = json.loads(self.rfile.read(length))
