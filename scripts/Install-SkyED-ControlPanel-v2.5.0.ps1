@@ -102,7 +102,7 @@ $expectedMembers = @(
     'docs/BRIGHT-COURSE-HUB-v2.5.0.md',
     'tests/test_root_release_v250.py',
     'tests/test_editor_upload_v250.py',
-    'tests/test_visual_browser_v250.py',
+    'skyed_lobby/tests/test_visual_browser_v250.py',
     'tests/test_install_v250.py'
 )
 $properties = @($manifest.files.PSObject.Properties)
