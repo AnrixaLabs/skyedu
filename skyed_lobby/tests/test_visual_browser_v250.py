@@ -49,7 +49,7 @@ class BrightRootNavigation(unittest.TestCase):
                     problems=[]
                     page.on('pageerror',lambda exc:problems.append(str(exc)))
                     page.goto(self.url,wait_until='networkidle')
-                    self.assertIn('Course Hub',page.title())
+                    self.assertIn('SkyED',page.title())
                     self.assertEqual(page.locator('.program-card').count(),5)
                     image=page.locator('.program-card img').first
                     image.wait_for()
