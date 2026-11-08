@@ -50,3 +50,18 @@ tests/test_install_v240.py text eol=lf
 skyed_lobby/tests/test_visual_browser_v240.py text eol=lf
 .github/workflows/skyed-bright-coursehub-v240.yml text eol=lf
 skyed_lobby/site/assets/illustrations/*.webp -text
+
+# SkyED v2.5.0: reproducible text members; WebP remains binary.
+scripts/course_hub_release.py text eol=lf
+scripts/course_hub_deploy.py text eol=lf
+scripts/package_control_panel_v250.py text eol=lf
+scripts/validate_lobby_content_v250.py text eol=lf
+scripts/Start-SkyED-CourseHub-Integration-v2.5.0.ps1 text eol=lf
+scripts/Deploy-SkyED-CourseHub-v2.5.0.ps1 text eol=lf
+scripts/Install-SkyED-ControlPanel-v2.5.0.ps1 text eol=lf
+docs/BRIGHT-COURSE-HUB-v2.5.0.md text eol=lf
+tests/test_root_release_v250.py text eol=lf
+tests/test_editor_upload_v250.py text eol=lf
+skyed_lobby/tests/test_visual_browser_v250.py text eol=lf
+tests/test_install_v250.py text eol=lf
+.github/workflows/skyed-bright-v250.yml text eol=lf
