@@ -1,0 +1,428 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "draft-2026-11-02",
+  "site": {
+    "brand": "skyed",
+    "brandDetail": "COURSE HUB",
+    "eyebrow": "LEARNING SPACE / 2026",
+    "title": "A brighter way to learn.",
+    "subtitle": "Everything your classroom needs, thoughtfully organized in one place.",
+    "announcement": "Your new learning space is taking shape. Explore the layout and replace the draft content before publishing.",
+    "heroLabel": "WELCOME TO YOUR CLASSROOM",
+    "heroTitle": "Big ideas start with small discoveries.",
+    "heroDescription": "Explore courses, discover new topics, and pick up right where you left off.",
+    "heroAction": "Explore learning paths",
+    "footer": "Sky Education · Course Hub",
+    "helpUrl": "",
+    "backToCurrentSiteUrl": "/",
+    "languages": [
+      "en",
+      "zh"
+    ],
+    "heroImage": ""
+  },
+  "navigation": [
+    {
+      "id": "discover",
+      "label": "Discover",
+      "icon": "compass"
+    },
+    {
+      "id": "programs",
+      "label": "Programs",
+      "icon": "grid"
+    },
+    {
+      "id": "lessons",
+      "label": "All lessons",
+      "icon": "book"
+    },
+    {
+      "id": "saved",
+      "label": "Saved",
+      "icon": "bookmark"
+    }
+  ],
+  "filters": {
+    "levels": [
+      "All levels",
+      "Ages 3–4",
+      "Ages 5–6",
+      "Primary 1–3",
+      "All ages"
+    ],
+    "contentTypes": [
+      "All types",
+      "Vocabulary",
+      "Speaking",
+      "Listening",
+      "Practice",
+      "Story"
+    ],
+    "sortOptions": [
+      "Featured",
+      "A to Z",
+      "Newest",
+      "Group order"
+    ]
+  },
+  "programs": [
+    {
+      "id": "young-learners",
+      "title": "Young Learners English",
+      "subtitle": "Explore language through play, stories and discovery.",
+      "description": "The real pilot contains approved lesson candidates. This demo keeps lesson destinations unlinked until the verified library is imported.",
+      "level": "Ages 3–4",
+      "category": "English",
+      "color": "coral",
+      "icon": "sparkles",
+      "featured": true,
+      "placeholder": false,
+      "status": "library-awaiting-link",
+      "order": 1,
+      "lessonCount": 11,
+      "tag": "Featured collection",
+      "image": ""
+    },
+    {
+      "id": "program-02",
+      "title": "Little Story Studio",
+      "subtitle": "Read, listen, imagine.",
+      "description": "Example program. Replace title, illustration, description and destination with approved content.",
+      "level": "Ages 5–6",
+      "category": "Story",
+      "color": "lilac",
+      "icon": "book",
+      "featured": false,
+      "placeholder": true,
+      "status": "planned",
+      "order": 2,
+      "lessonCount": 0,
+      "tag": "Editable example",
+      "image": ""
+    },
+    {
+      "id": "program-03",
+      "title": "Everyday Conversations",
+      "subtitle": "Small talk, big confidence.",
+      "description": "Example program. No live lessons or publishing are implied.",
+      "level": "Primary 1–3",
+      "category": "Speaking",
+      "color": "blue",
+      "icon": "chat",
+      "featured": false,
+      "placeholder": true,
+      "status": "planned",
+      "order": 3,
+      "lessonCount": 0,
+      "tag": "Editable example",
+      "image": ""
+    },
+    {
+      "id": "program-04",
+      "title": "Creative Discovery",
+      "subtitle": "Curious minds in motion.",
+      "description": "Example program, for layout evaluation only.",
+      "level": "All ages",
+      "category": "Creative",
+      "color": "mint",
+      "icon": "shapes",
+      "featured": false,
+      "placeholder": true,
+      "status": "planned",
+      "order": 4,
+      "lessonCount": 0,
+      "tag": "Editable example",
+      "image": ""
+    },
+    {
+      "id": "program-05",
+      "title": "Skills & Practice",
+      "subtitle": "Build a little every day.",
+      "description": "Example program, for layout evaluation only.",
+      "level": "Primary 1–3",
+      "category": "Practice",
+      "color": "yellow",
+      "icon": "target",
+      "featured": false,
+      "placeholder": true,
+      "status": "planned",
+      "order": 5,
+      "lessonCount": 0,
+      "tag": "Editable example",
+      "image": ""
+    }
+  ],
+  "groups": [
+    {
+      "id": "unit-1",
+      "title": "Unit 01",
+      "subtitle": "Editable topic · replace from your approved syllabus",
+      "order": 1
+    },
+    {
+      "id": "unit-2",
+      "title": "Unit 02",
+      "subtitle": "Editable topic · replace from your approved syllabus",
+      "order": 2
+    },
+    {
+      "id": "unit-3",
+      "title": "Unit 03",
+      "subtitle": "Editable topic · replace from your approved syllabus",
+      "order": 3
+    },
+    {
+      "id": "lesson-series",
+      "title": "Lesson Series",
+      "subtitle": "Reusable lesson sequence",
+      "order": 4
+    },
+    {
+      "id": "topic-practice",
+      "title": "Topic Practice",
+      "subtitle": "Focused language practice",
+      "order": 5
+    }
+  ],
+  "lessons": [
+    {
+      "id": "pilot-01",
+      "programId": "young-learners",
+      "groupId": "unit-1",
+      "title": "Lesson 01 · Add verified title",
+      "summary": "Link to existing approved lesson; draft label only.",
+      "type": "Vocabulary",
+      "level": "Ages 3–4",
+      "minutes": 0,
+      "order": 1,
+      "status": "needs-link",
+      "url": "",
+      "media": "",
+      "tags": [
+        "starter",
+        "vocabulary"
+      ]
+    },
+    {
+      "id": "pilot-02",
+      "programId": "young-learners",
+      "groupId": "unit-1",
+      "title": "Lesson 02 · Add verified title",
+      "summary": "Link to existing approved lesson; draft label only.",
+      "type": "Listening",
+      "level": "Ages 3–4",
+      "minutes": 0,
+      "order": 2,
+      "status": "needs-link",
+      "url": "",
+      "media": "",
+      "tags": [
+        "listening"
+      ]
+    },
+    {
+      "id": "pilot-03",
+      "programId": "young-learners",
+      "groupId": "unit-1",
+      "title": "Lesson 03 · Add verified title",
+      "summary": "Link to existing approved lesson; draft label only.",
+      "type": "Practice",
+      "level": "Ages 3–4",
+      "minutes": 0,
+      "order": 3,
+      "status": "needs-link",
+      "url": "",
+      "media": "",
+      "tags": [
+        "practice"
+      ]
+    },
+    {
+      "id": "pilot-04",
+      "programId": "young-learners",
+      "groupId": "unit-2",
+      "title": "Lesson 04 · Add verified title",
+      "summary": "Link to existing approved lesson; draft label only.",
+      "type": "Vocabulary",
+      "level": "Ages 5–6",
+      "minutes": 0,
+      "order": 4,
+      "status": "needs-link",
+      "url": "",
+      "media": "",
+      "tags": [
+        "vocabulary"
+      ]
+    },
+    {
+      "id": "pilot-05",
+      "programId": "young-learners",
+      "groupId": "unit-2",
+      "title": "Lesson 05 · Add verified title",
+      "summary": "Link to existing approved lesson; draft label only.",
+      "type": "Speaking",
+      "level": "Ages 5–6",
+      "minutes": 0,
+      "order": 5,
+      "status": "needs-link",
+      "url": "",
+      "media": "",
+      "tags": [
+        "speaking"
+      ]
+    },
+    {
+      "id": "pilot-06",
+      "programId": "young-learners",
+      "groupId": "unit-3",
+      "title": "Lesson 06 · Add verified title",
+      "summary": "Link to existing approved lesson; draft label only.",
+      "type": "Story",
+      "level": "Ages 5–6",
+      "minutes": 0,
+      "order": 6,
+      "status": "needs-link",
+      "url": "",
+      "media": "",
+      "tags": [
+        "story"
+      ]
+    },
+    {
+      "id": "pilot-07",
+      "programId": "young-learners",
+      "groupId": "unit-3",
+      "title": "Lesson 07 · Add verified title",
+      "summary": "Link to existing approved lesson; draft label only.",
+      "type": "Listening",
+      "level": "Ages 5–6",
+      "minutes": 0,
+      "order": 7,
+      "status": "needs-link",
+      "url": "",
+      "media": "",
+      "tags": [
+        "listening"
+      ]
+    },
+    {
+      "id": "pilot-08",
+      "programId": "young-learners",
+      "groupId": "lesson-series",
+      "title": "Lesson 08 · Add verified title",
+      "summary": "Link to existing approved lesson; draft label only.",
+      "type": "Speaking",
+      "level": "Primary 1–3",
+      "minutes": 0,
+      "order": 8,
+      "status": "needs-link",
+      "url": "",
+      "media": "",
+      "tags": [
+        "speaking"
+      ]
+    },
+    {
+      "id": "pilot-09",
+      "programId": "young-learners",
+      "groupId": "lesson-series",
+      "title": "Lesson 09 · Add verified title",
+      "summary": "Link to existing approved lesson; draft label only.",
+      "type": "Vocabulary",
+      "level": "Primary 1–3",
+      "minutes": 0,
+      "order": 9,
+      "status": "needs-link",
+      "url": "",
+      "media": "",
+      "tags": [
+        "vocabulary"
+      ]
+    },
+    {
+      "id": "pilot-10",
+      "programId": "young-learners",
+      "groupId": "topic-practice",
+      "title": "Lesson 10 · Add verified title",
+      "summary": "Link to existing approved lesson; draft label only.",
+      "type": "Practice",
+      "level": "Primary 1–3",
+      "minutes": 0,
+      "order": 10,
+      "status": "needs-link",
+      "url": "",
+      "media": "",
+      "tags": [
+        "practice"
+      ]
+    },
+    {
+      "id": "pilot-11",
+      "programId": "young-learners",
+      "groupId": "topic-practice",
+      "title": "Lesson 11 · Add verified title",
+      "summary": "Link to existing approved lesson; draft label only.",
+      "type": "Speaking",
+      "level": "Primary 1–3",
+      "minutes": 0,
+      "order": 11,
+      "status": "needs-link",
+      "url": "",
+      "media": "",
+      "tags": [
+        "speaking"
+      ]
+    }
+  ],
+  "translations": {
+    "zh": {
+      "discover": "探索",
+      "programs": "课程系列",
+      "lessons": "全部课程",
+      "saved": "已收藏",
+      "search": "搜索课程、主题或单元...",
+      "allPrograms": "全部课程",
+      "allLevels": "所有年龄",
+      "allTypes": "所有类型",
+      "viewAll": "查看全部",
+      "clearFilters": "清除筛选",
+      "draft": "待完善",
+      "planned": "筹备中",
+      "save": "收藏",
+      "savedAction": "已收藏",
+      "browse": "浏览课程",
+      "viewDetails": "查看详情",
+      "openLesson": "打开课程",
+      "unlinked": "等待连接已审核的课程链接",
+      "noResults": "没有找到匹配内容",
+      "noResultsDetail": "请尝试其他关键词或清除筛选。",
+      "collections": "探索学习路径",
+      "collectionDesc": "为好奇的孩子准备的学习空间",
+      "continue": "学习资料",
+      "continueDesc": "按主题浏览课程，轻松找到下一步。",
+      "featured": "精选",
+      "results": "项内容",
+      "close": "关闭",
+      "language": "语言",
+      "menu": "打开菜单",
+      "back": "返回",
+      "demoNotice": "演示内容：请先替换示例与课程链接，再对外发布。",
+      "editHint": "在 content/lobby.json 中更新此项目",
+      "statusLabel": "状态",
+      "notReady": "尚未连接课程",
+      "details": "课程详情",
+      "home": "首页",
+      "about": "关于此空间",
+      "copyright": "Sky Education · 课程中心",
+      "programsCount": "学习路径",
+      "lessonCount": "课程占位",
+      "browseLesson": "浏览课程",
+      "byUnit": "单元",
+      "sort": "排序",
+      "emptySaved": "还没有收藏内容",
+      "emptySavedDetail": "点击课程卡片上的书签即可保存在此浏览器中。",
+      "reset": "重置"
+    }
+  }
+}

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 from .image_planner import ANTONYM_PAIRS, infer_pos_map
-from .utils import ensure_dir, slugify as card_slugify
+from .utils import ensure_dir, slugify_file as card_slugify
 
 
 QUESTION_LIMIT_DEFAULT = 8
@@ -77,7 +77,7 @@ def _seed_from_spec(spec: Dict[str, Any]) -> int:
 def _blank_word(sentence: str, word: str) -> Optional[str]:
     if not sentence or not word:
         return None
-    pattern = re.compile(rf"{re.escape(word)}", flags=re.IGNORECASE)
+    pattern = re.compile(rf"\b{re.escape(word)}\b", flags=re.IGNORECASE)
     if not pattern.search(sentence):
         return None
     return pattern.sub("____", sentence, count=1)
@@ -301,7 +301,7 @@ def _build_sentence_cloze(entries: List[Entry], spec: Dict[str, Any], rng: rando
         en = s.get("en", "")
         if not en:
             continue
-        hits = [e for e in entries if re.search(rf"{re.escape(e.en)}", en, flags=re.IGNORECASE)]
+        hits = [e for e in entries if re.search(rf"\b{re.escape(e.en)}\b", en, flags=re.IGNORECASE)]
         if not hits:
             continue
         ranked.append((0 if len(hits) == 1 else len(hits), en, hits))

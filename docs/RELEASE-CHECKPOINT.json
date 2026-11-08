@@ -1,0 +1,28 @@
+{
+  "version": "2.4.0",
+  "scope": "Course Hub Bright UI stage and Control Panel integration",
+  "stage": "STAGED_NOT_DEPLOYED",
+  "legacy_source_files_preserved": 442,
+  "media_preserved": {
+    "audio": 342,
+    "images": 91
+  },
+  "source_backed_lessons": 11,
+  "source_groups": 5,
+  "new_visual_assets": 18,
+  "new_ui_routes": [
+    "discover",
+    "programs",
+    "lessons",
+    "saved",
+    "program",
+    "lesson"
+  ],
+  "editor_preserves_user_draft": true,
+  "teacher_review": "PENDING",
+  "published": false,
+  "production_change": false,
+  "current_live_server_revalidated": false,
+  "real_media_playback_device_qa": "PENDING",
+  "visual_browser_qa": "IN_CI"
+}

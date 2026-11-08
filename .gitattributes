@@ -1,0 +1,67 @@
+# Ensure exact text bytes in Windows/Linux checkouts for SkyED v2.3.2 release inputs.
+# Scoped to the 28 immutable, text-only overlay members; legacy files are unaffected.
+.gitattributes text eol=lf
+docs/CONTROL-PANEL-v2.3.2.md text eol=lf
+docs/RELEASE-CHECKPOINT.json text eol=lf
+scripts/Install-SkyED-ControlPanel-v2.3.2.ps1 text eol=lf
+scripts/Start-SkyED-CourseHub-Integration-v2.3.2.ps1 text eol=lf
+scripts/course_hub_integration.py text eol=lf
+scripts/package_control_panel_v232.py text eol=lf
+scripts/validate_lobby_content_v232.py text eol=lf
+skyed_control/__init__.py text eol=lf
+skyed_control/integration_workspace.py text eol=lf
+skyed_control/lobby_workspace.py text eol=lf
+skyed_control/registry.py text eol=lf
+skyed_control_panel.py text eol=lf
+skyed_lobby/scripts/control_server.py text eol=lf
+skyed_lobby/scripts/preview.py text eol=lf
+skyed_lobby/site/assets/app.js text eol=lf
+skyed_lobby/site/assets/favicon.svg text eol=lf
+skyed_lobby/site/assets/media/README.txt text eol=lf
+skyed_lobby/site/assets/styles.css text eol=lf
+skyed_lobby/site/content/lobby.json text eol=lf
+skyed_lobby/site/index.html text eol=lf
+skyed_lobby/tests/test_browser_lobby.py text eol=lf
+skyed_lobby/tests/test_control_lobby.py text eol=lf
+skyed_lobby/tools/edit-lobby.html text eol=lf
+skyed_lobby/tools/editor.css text eol=lf
+skyed_lobby/tools/editor.js text eol=lf
+tests/test_course_hub_integration.py text eol=lf
+tests/test_course_hub_integration_qt.py text eol=lf
+tests/test_install_v232.py text eol=lf
+
+# v2.3.3 source successor; preserve previous v2.3.2 lines above.
+docs/CONTROL-PANEL-v2.3.3.md text eol=lf
+scripts/Install-SkyED-ControlPanel-v2.3.3.ps1 text eol=lf
+scripts/Start-SkyED-CourseHub-Integration-v2.3.3.ps1 text eol=lf
+scripts/validate_lobby_content_v233.py text eol=lf
+scripts/package_control_panel_v233.py text eol=lf
+tests/test_install_v233.py text eol=lf
+tests/test_pilot_route_reconciliation.py text eol=lf
+
+# SkyED Bright Course Hub v2.4.0; verify consistent cross-platform package bytes.
+docs/VISUAL-IDENTITY-v2.4.0.md text eol=lf
+scripts/Install-SkyED-ControlPanel-v2.4.0.ps1 text eol=lf
+scripts/Start-SkyED-CourseHub-Integration-v2.4.0.ps1 text eol=lf
+scripts/validate_lobby_content_v240.py text eol=lf
+scripts/package_control_panel_v240.py text eol=lf
+tests/test_visual_v240.py text eol=lf
+tests/test_install_v240.py text eol=lf
+skyed_lobby/tests/test_visual_browser_v240.py text eol=lf
+.github/workflows/skyed-bright-coursehub-v240.yml text eol=lf
+skyed_lobby/site/assets/illustrations/*.webp -text
+
+# SkyED v2.5.0: reproducible text members; WebP remains binary.
+scripts/course_hub_release.py text eol=lf
+scripts/course_hub_deploy.py text eol=lf
+scripts/package_control_panel_v250.py text eol=lf
+scripts/validate_lobby_content_v250.py text eol=lf
+scripts/Start-SkyED-CourseHub-Integration-v2.5.0.ps1 text eol=lf
+scripts/Deploy-SkyED-CourseHub-v2.5.0.ps1 text eol=lf
+scripts/Install-SkyED-ControlPanel-v2.5.0.ps1 text eol=lf
+docs/BRIGHT-COURSE-HUB-v2.5.0.md text eol=lf
+tests/test_root_release_v250.py text eol=lf
+tests/test_editor_upload_v250.py text eol=lf
+skyed_lobby/tests/test_visual_browser_v250.py text eol=lf
+tests/test_install_v250.py text eol=lf
+.github/workflows/skyed-bright-v250.yml text eol=lf

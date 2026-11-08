@@ -39,6 +39,16 @@
     .choice.kid-image-only .choice-text,.choice.kid-image-only .play{display:none!important}
     .choice.kid-image-only img{width:100%;height:auto;aspect-ratio:4/3;max-width:320px}
 @media (max-width:820px){ .choice-inner{flex-direction:column;align-items:flex-start}.choice img{width:100%;height:auto;aspect-ratio:4/3} }
+
+    /* Stage D: four listening pictures visible together on small screens. */
+    .skyed-picture-grid .choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+    .skyed-picture-grid .choice{display:block;min-width:0;margin:0;padding:6px;border-radius:16px;touch-action:manipulation}
+    .skyed-picture-grid .choice-inner{display:block}
+    .skyed-picture-grid .choice.kid-image-only img{width:100%;height:auto;max-width:none;aspect-ratio:4/3;object-fit:contain;padding:2px;border-radius:10px}
+    .skyed-picture-grid .choice:focus-visible{outline:3px solid #0e7490;outline-offset:2px}
+    .skyed-picture-grid .card{padding:12px}
+    @media (min-width:720px){.skyed-picture-grid .choice-grid{max-width:720px;margin-inline:auto}}
+    @media (max-width:390px){.skyed-picture-grid .choice-grid{gap:8px}.skyed-picture-grid .choice{padding:4px}}
   </style>
 </head>
 <body>
@@ -78,6 +88,7 @@ async function main(){
   subtitle.textContent = quiz.subtitle || '';
   const questions = quiz.questions || [];
   const mode = quiz.renderer_mode || 'list';
+  if(mode==='kid_single') app.classList.add('skyed-picture-grid');
   if ((quiz.practice_family||'') === 'fun_mission') document.querySelector('.top').classList.add('fun-top');
   if (mode === 'kid_single') document.querySelector('.top').classList.add('kid-top');
   if ((quiz.practice_family||'') === 'strict_study') document.querySelector('.top').classList.add('strict-top');
@@ -94,7 +105,9 @@ async function main(){
     if(q.helper && mode!=='kid_single'){ const h=document.createElement('div'); h.className='helper'; h.textContent=q.helper; card.appendChild(h); }
     if(q.prompt_audio){ const row=document.createElement('div'); row.className='actions'; const pb=makePlay(q.prompt_audio, mode==='kid_single'?'▶ Play sound':(((quiz.practice_family||'')==='fun_mission')?'Listen to checkpoint':'Listen'), 'play'); if(pb) row.appendChild(pb); card.appendChild(row); }
     if(q.prompt_image){ const pm=document.createElement('div'); pm.className='prompt'; const img=document.createElement('img'); img.src=q.prompt_image; img.alt=q.q||''; pm.appendChild(img); card.appendChild(pm); }
-    (q.choices||[]).forEach((raw, ci)=>{ const ch=normalizeChoice(raw); const btn=document.createElement('button'); btn.type='button'; btn.className='choice' + (mode==='kid_single' ? ' kid-image-only' : ''); const inner=document.createElement('div'); inner.className='choice-inner'; if(ch.img){const im=document.createElement('img'); im.src=ch.img; im.alt=ch.text||('choice '+(ci+1)); inner.appendChild(im);} if(mode!=='kid_single'){ const tx=document.createElement('div'); tx.className='choice-text'; if(ch.text){const m=document.createElement('div'); m.textContent=ch.text; tx.appendChild(m);} if(ch.subtext){const s=document.createElement('div'); s.className='sub'; s.textContent=ch.subtext; tx.appendChild(s);} inner.appendChild(tx); } if(ch.audio && mode!=='kid_single'){ const ab=makePlay(ch.audio,'🔊','play'); inner.appendChild(ab); } btn.appendChild(inner); btn.onclick=()=>{ answers[idx]=ci; [...card.querySelectorAll('.choice')].forEach(x=>x.classList.remove('active','correct','wrong')); btn.classList.add('active'); updateProgress(); if(mode==='kid_single'){ const expected=Number(q.answer_index); if(ci===expected){ btn.classList.add('correct'); result.style.display='block'; result.innerHTML='⭐ Great!'; if(current<questions.length-1){ setTimeout(()=>{ current++; autoScrollPending = true; render(); },650);} } else { btn.classList.add('wrong'); result.style.display='block'; result.innerHTML='Try again. Listen one more time.'; if(q.prompt_audio){ setTimeout(()=>playAudio(q.prompt_audio),250); } } } }; card.appendChild(btn); });
+    const choicesWrap=document.createElement('div'); choicesWrap.className='choice-grid';
+    (q.choices||[]).forEach((raw, ci)=>{ const ch=normalizeChoice(raw); const btn=document.createElement('button'); btn.type='button'; btn.className='choice' + (mode==='kid_single' ? ' kid-image-only' : ''); const inner=document.createElement('div'); inner.className='choice-inner'; if(ch.img){const im=document.createElement('img'); im.src=ch.img; im.alt=ch.text||('choice '+(ci+1)); inner.appendChild(im);} if(mode!=='kid_single'){ const tx=document.createElement('div'); tx.className='choice-text'; if(ch.text){const m=document.createElement('div'); m.textContent=ch.text; tx.appendChild(m);} if(ch.subtext){const s=document.createElement('div'); s.className='sub'; s.textContent=ch.subtext; tx.appendChild(s);} inner.appendChild(tx); } if(ch.audio && mode!=='kid_single'){ const ab=makePlay(ch.audio,'🔊','play'); inner.appendChild(ab); } btn.appendChild(inner); btn.setAttribute('aria-label', mode==='kid_single' ? ('Picture option '+(ci+1)) : (ch.text||('Option '+(ci+1)))); btn.onclick=()=>{ const expected=Number(q.answer_index); if(mode==='kid_single' && ci!==expected){ delete answers[idx]; }else{ answers[idx]=ci; } [...card.querySelectorAll('.choice')].forEach(x=>x.classList.remove('active','correct','wrong')); btn.classList.add('active'); updateProgress(); if(mode==='kid_single'){ if(ci===expected){ btn.classList.add('correct'); result.style.display='block'; result.innerHTML='⭐ Great!'; if(current<questions.length-1){ setTimeout(()=>{ current++; autoScrollPending = true; render(); },650);} } else { btn.classList.add('wrong'); result.style.display='block'; result.innerHTML='Try again. Listen one more time.'; if(q.prompt_audio){ setTimeout(()=>playAudio(q.prompt_audio),250); } } } }; choicesWrap.appendChild(btn); });
+    card.appendChild(choicesWrap);
     return card;
   }
   function render(){ app.innerHTML=''; renderNav(); if(mode==='list'){ questions.forEach((q,idx)=>app.appendChild(buildCard(q,idx))); } else { if(questions[current]) app.appendChild(buildCard(questions[current],current)); }
@@ -103,7 +116,27 @@ async function main(){
   }
   function reset(){ Object.keys(answers).forEach(k=>delete answers[k]); current=0; autoScrollPending = false; result.style.display='none'; result.innerHTML=''; updateProgress(); render(); }
   retry.onclick=reset;
-  submit.onclick=()=>{ let score=0; result.style.display='block'; result.innerHTML=''; if(mode!=='list') render(); [...app.querySelectorAll('[data-index]')].forEach(card=>{ const idx=Number(card.dataset.index); const q=questions[idx]||{}; const expected=Number(q.answer_index); const chosen=(idx in answers)?Number(answers[idx]):-1; const btns=[...card.querySelectorAll('.choice')]; btns.forEach((b,bi)=>{ b.classList.remove('correct','wrong'); if(bi===expected) b.classList.add('correct'); if(bi===chosen && chosen!==expected) b.classList.add('wrong'); }); if(chosen===expected) score++; }); result.innerHTML='<b>Score:</b> '+score+' / '+questions.length; };
+  submit.onclick=()=>{
+    const completed=questions.reduce((count,q,idx)=>count+((idx in answers)?1:0),0);
+    const score=questions.reduce((count,q,idx)=>count+((idx in answers && Number(answers[idx])===Number(q.answer_index))?1:0),0);
+    result.style.display='block'; result.setAttribute('role','status');
+    if(mode==='kid_single' && completed<questions.length){
+      result.textContent='Complete all rounds to see your score. '+completed+' of '+questions.length+' finished.';
+      return;
+    }
+    result.textContent='Score: '+score+' / '+questions.length;
+    if(mode!=='list') render();
+    [...app.querySelectorAll('[data-index]')].forEach(card=>{
+      const idx=Number(card.dataset.index); const q=questions[idx]||{};
+      const expected=Number(q.answer_index); const chosen=(idx in answers)?Number(answers[idx]):-1;
+      const btns=[...card.querySelectorAll('.choice')];
+      btns.forEach((b,bi)=>{
+        b.classList.remove('correct','wrong');
+        if(bi===expected) b.classList.add('correct');
+        if(bi===chosen && chosen!==expected) b.classList.add('wrong');
+      });
+    });
+  };
   reset();
 }
 main();

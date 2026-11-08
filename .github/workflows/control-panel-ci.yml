@@ -1,0 +1,121 @@
+name: SkyED Control Panel CI
+
+on:
+  push:
+    branches:
+      - feature/control-panel-unified-v2.2.1
+      - feature/control-panel-ci-hardening-v2.2.1
+      - feature/homework-automation-v2
+      - fix/control-panel-offscreen-fonts-v2.2.1
+      - master
+      - main
+    paths:
+      - 'skyed_control_panel.py'
+      - 'skyed_control/**'
+      - 'scripts/Install-SkyED-ControlPanel-v2.2.1.ps1'
+      - 'scripts/package_control_panel.py'
+      - 'tests/test_control_panel_*.py'
+      - 'docs/CONTROL-PANEL-v2.2.1.md'
+      - '.github/workflows/control-panel-ci.yml'
+  pull_request:
+    branches:
+      - feature/homework-automation-v2
+      - master
+      - main
+    paths:
+      - 'skyed_control_panel.py'
+      - 'skyed_control/**'
+      - 'scripts/Install-SkyED-ControlPanel-v2.2.1.ps1'
+      - 'scripts/package_control_panel.py'
+      - 'tests/test_control_panel_*.py'
+      - 'docs/CONTROL-PANEL-v2.2.1.md'
+      - '.github/workflows/control-panel-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: control-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-desktop-gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate Python syntax and standalone registry
+        run: |
+          python -m py_compile skyed_control_panel.py skyed_control/__init__.py skyed_control/registry.py scripts/package_control_panel.py
+          python -m unittest discover -s tests -p 'test_control_panel_registry.py' -v
+      - name: Install missing headless Qt shared libraries
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libegl1 libgl1 libopengl0 libxcb-cursor0 libxkbcommon-x11-0
+      - name: Install real Qt desktop runtime
+        run: python -m pip install 'PySide6>=6.7,<7'
+      - name: Headless Qt creation, navigation and smoke tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m unittest discover -s tests -p 'test_control_panel_qt.py' -v
+          python skyed_control_panel.py --smoke-test
+      - name: Build and verify five-member overlay ZIP
+        run: |
+          python scripts/package_control_panel.py --out dist/SkyED-ControlPanel-v2.2.1.zip
+          python -c "import zipfile; p='dist/SkyED-ControlPanel-v2.2.1.zip'; z=zipfile.ZipFile(p); assert z.testzip() is None; assert len(z.namelist()) == 6; print('CONTROL_PANEL_DISTRIBUTION=PASS')"
+          python scripts/package_control_panel.py --out dist/repro-check.zip
+          python -c "from pathlib import Path; import hashlib; a=Path('dist/SkyED-ControlPanel-v2.2.1.zip').read_bytes(); b=Path('dist/repro-check.zip').read_bytes(); assert a == b; print('CONTROL_PANEL_REPRODUCIBLE_SHA256=PASS', hashlib.sha256(a).hexdigest())"
+      - name: Publish verified Windows installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SkyED-ControlPanel-v2.2.1
+          path: dist/SkyED-ControlPanel-v2.2.1.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  windows-desktop-gates:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Parse and verify PowerShell installer without running it
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'scripts/Install-SkyED-ControlPanel-v2.2.1.ps1'),
+            [ref]$tokens, [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_ }; exit 1 }
+          Write-Host 'SKYED_INSTALLER_SYNTAX=PASS'
+      - name: Python and registry tests
+        shell: pwsh
+        run: |
+          python -m py_compile skyed_control_panel.py skyed_control/registry.py scripts/package_control_panel.py
+          python -m unittest discover -s tests -p 'test_control_panel_registry.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'REGISTRY_TEST_FAILURE' }
+      - name: Install actual Windows Qt runtime
+        run: python -m pip install "PySide6>=6.7,<7"
+      - name: Windows Qt creation and interactive route state
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          python -m unittest discover -s tests -p 'test_control_panel_qt.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'WINDOWS_QT_TEST_FAILURE' }
+          $fontOutput = & python skyed_control_panel.py --smoke-test 2>&1
+          $fontOutput | Out-Host
+          if ($LASTEXITCODE -ne 0) { throw 'WINDOWS_QT_START_FAILURE' }
+          if (($fontOutput | Out-String) -match 'QFontDatabase: Cannot find font directory') {
+            throw 'WINDOWS_OFFSCREEN_FONT_WARNING_REGRESSION'
+          }
+          Write-Host 'WINDOWS_QT_OFFSCREEN_FONT_WARNING=ABSENT'

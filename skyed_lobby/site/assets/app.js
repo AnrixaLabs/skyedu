@@ -1,0 +1,188 @@
+/* SkyED Course Hub v2.4.0 — genuine captured lessons, offline-safe UI.
+ * No trackers, remote dependencies, fabricated progress, publication or uploads.
+ * Source media are served unchanged from the captured Course Hub root.
+ */
+(() => {
+  'use strict';
+  const VERSION='2.5.0';
+  const $ = (s) => document.querySelector(s);
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const ico = (name, cls='') => `<svg class="icon ${cls}" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
+  const pathAsset = v => typeof v==='string' && /^\/?assets\/media\/v1\/[a-zA-Z0-9_\/-]+\.(?:png|jpg|jpeg|webp|mp3|wav|ogg|m4a)$/.test(v) && !v.includes('..') ? new URL('../'+v.replace(/^\//,''),document.baseURI).href : null;
+  const ill = file => `assets/illustrations/${file}.webp`;
+  const PHOTO = ['topic-01','topic-02','topic-03','topic-04','topic-05','topic-06','topic-07','topic-08','topic-09','topic-10','topic-11'];
+  const TITLES = [
+    ['Big and Small','大和小','Pets and sizes'],['Garden Colors','花园里的颜色','Colors in nature'],['Classroom Positions','教室里的位置','Objects and positions'],
+    ['Fast and Slow','快和慢','Vehicles and speed'],['My City','我的城市','Places and our world'],['Toy Shop','玩具商店','Toys and wishes'],
+    ['How Do You Feel?','你感觉怎么样？','Everyday feelings'],['Happy, Sad, Angry','开心、难过、生气','Understanding emotions'],
+    ['Meals of the Day','一日三餐','Meals and food'],['People Who Help Us','帮助我们的人','People and their jobs'],['Days of the Week','星期','Days and routines']
+  ];
+  const PROG_ZH = {'young-learners':'少儿英语','program-02':'小小故事屋','program-03':'日常对话','program-04':'创意发现','program-05':'技能练习'};
+  const PATH_INFO = [
+    ['Young Learners English','少儿英语','Build a bright English foundation through real lessons.','通过真实课程打下有趣的英语基础。'],
+    ['Little Story Studio','小小故事屋','Read, listen and imagine.','阅读、聆听、发挥想象。'],
+    ['Everyday Conversations','日常对话','Use English in everyday moments.','在日常生活中使用英语。'],
+    ['Creative Discovery','创意发现','Explore the world through English.','用英语发现世界。'],
+    ['Skills & Practice','技能练习','Build confidence with playful practice.','在趣味练习中建立自信。']
+  ];
+  const UNITS = [
+    ['Foundations','基础启蒙','Pets and colors','宠物与颜色'],['Around the Classroom','走进教室','Classroom objects and movement','教室物品与动作'],
+    ['Our World','我们的世界','Places and our world','地点和世界'],['Daily Life & Feelings','日常生活与情感','People, feelings and routines','人物、情绪与日常'],
+    ['Days & Practice','星期与练习','Days of the week','星期与日常表达']
+  ];
+  const COPY = {
+    en:{discover:'Discover',programs:'Programs',lessons:'All Lessons',saved:'Saved',learningSpace:'YOUR LEARNING SPACE',growTitle:'A space to grow in English',growText:'Real lessons. Bright discoveries. Your pace.',originalHub:'Discover',search:'Search lessons, topics or programs…',heroSmall:'SKYED COURSE HUB',heroA:'A Brighter Way',heroB:'to Learn English',heroSub:'Fun, real-world lessons for curious young learners.',explore:'Explore Learning Paths',paths:'Explore Learning Paths',pathDesc:'Choose a program and begin an English adventure.',allPrograms:'View All Programs',classes:'Inside the Classroom',classDesc:'Real vocabulary, listening and practice from the captured library.',viewAll:'View All Lessons',pilot:'Pilot lesson',coming:'Coming soon',planned:'Planned program',plannedDesc:'This program does not yet contain approved lessons. Its design is ready for future content.',return:'Back to learning paths',start:'Explore 11 Lessons',progress:'Your Learning',onDevice:'Saved only on this device',unit:'Unit',lessonsShort:'lessons',learningJourney:'Your Learning Journey',journeyText:'The real captured course groups below—no invented lessons or completion.',path:'Learning Path',all:'All Lessons',vocabulary:'Vocabulary',listening:'Listening',speaking:'Speaking',practice:'Practice',choose:'Choose a lesson to begin.',filter:'Filter lessons',searchResult:'matching lessons',empty:'No matching lessons',emptyDesc:'Try another search term or reset your filters.',reset:'Reset',save:'Save',remove:'Saved',open:'Open Lesson',next:'Next Lesson',back:'Back',overview:'Overview',learn:'Learn',listen:'Listen',speak:'Speak',review:'Review',learnIntro:'Look, listen and learn the words.',listenIntro:'Play the authentic sentence recordings.',speakIntro:'Listen, say it aloud, then confirm your own practice. Speech is not recorded or scored.',reviewIntro:'Practice questions from the original lesson. Answers are checked locally.',hear:'Play English audio',hearZh:'Play Chinese audio',quiz:'Start Practice',answer:'Check Answer',correct:'Correct! Well done.',incorrect:'Not quite — the correct choice is highlighted.',question:'Question',nextQ:'Next Question',complete:'Finish Practice',again:'Try Again',score:'Correct answers',deviceProgress:'Practice completed on this browser',practiceDone:'I practiced saying it',source:'Original lesson media',notPublished:'Preview only · Teacher review pending',notes:'Learning Goals',notesText:'Practice with the original lesson pictures, voices and questions.',notAvailable:'The source lesson is not included in this local designer. Build a stage from your captured Course Hub to open the activity.',loading:'Loading the learning space…',noCatalog:'The captured lesson library is not attached to this standalone preview.',justPreview:'Design preview',statPaths:'Learning paths',statLessons:'Verified lesson routes',statUnits:'Source groups',savedEmpty:'Nothing saved yet',savedEmptyDesc:'Use the heart on a lesson to save it on this browser.',selected:'Selected',language:'Language',localOnly:'Local-only progress. No accounts or remote sync.',resume:'Continue Learning',finish:'Done',skip:'Skip',activity:'Activity',picture:'Picture words',sentences:'Sentences',quizSection:'Practice questions'},
+    zh:{discover:'发现',programs:'学习课程',lessons:'所有课时',saved:'已收藏',learningSpace:'我的学习空间',growTitle:'在英语世界里成长',growText:'真实课程，快乐探索，按自己的节奏。',originalHub:'返回发现',search:'搜索课时、主题或课程…',heroSmall:'SKYED 课程中心',heroA:'让英语学习',heroB:'更快乐、更精彩',heroSub:'为好奇的小朋友准备的真实有趣的英语课程。',explore:'探索学习路径',paths:'探索学习路径',pathDesc:'选择一个课程，开始英语学习旅程。',allPrograms:'查看全部课程',classes:'走进英语课堂',classDesc:'来自真实课程库的词汇、听力与练习。',viewAll:'查看全部课时',pilot:'试用课时',coming:'即将推出',planned:'规划中的课程',plannedDesc:'该课程暂时没有审核通过的课时，页面仅供预览。',return:'返回学习路径',start:'浏览 11 节课程',progress:'我的学习',onDevice:'仅保存在此设备',unit:'单元',lessonsShort:'节课时',learningJourney:'学习之旅',journeyText:'按真实课程分组，不添加虚构课时或进度。',path:'学习路径',all:'全部课时',vocabulary:'词汇',listening:'听力',speaking:'口语',practice:'练习',choose:'选择一节课开始学习。',filter:'筛选课时',searchResult:'个匹配课时',empty:'没有匹配的课时',emptyDesc:'试试其他关键词，或清除筛选。',reset:'重置',save:'收藏',remove:'已收藏',open:'打开课时',next:'下一课',back:'返回',overview:'概览',learn:'学习',listen:'听力',speak:'口语',review:'复习',learnIntro:'看图片、听发音，学习词汇。',listenIntro:'播放原课程中的真实句子录音。',speakIntro:'听一听，自己大声说出来，再确认练习。不会录音或自动评分。',reviewIntro:'使用原课程的练习题，答案在本地检查。',hear:'播放英文',hearZh:'播放中文',quiz:'开始练习',answer:'检查答案',correct:'答对了，真棒！',incorrect:'还差一点，正确答案已标出。',question:'题目',nextQ:'下一题',complete:'完成练习',again:'重新练习',score:'答对题数',deviceProgress:'此浏览器上的练习已完成',practiceDone:'我已完成跟读',source:'原始课程媒体',notPublished:'仅供预览 · 等待教师审核',notes:'学习目标',notesText:'使用原课程图片、语音和练习题进行学习。',notAvailable:'此设计器未附带源课程，请从已捕获的 Course Hub 文件建立预览。',loading:'正在载入学习空间…',noCatalog:'当前独立预览未附带课程库。',justPreview:'设计预览',statPaths:'学习路径',statLessons:'已验证的课程链接',statUnits:'原始课程分组',savedEmpty:'还没有收藏的课时',savedEmptyDesc:'点击课时上的爱心，在本浏览器中收藏。',selected:'已选择',language:'语言',localOnly:'学习记录仅存在本地，没有账号或云同步。',resume:'继续学习',finish:'完成',skip:'跳过',activity:'学习活动',picture:'图片词汇',sentences:'句子',quizSection:'练习题'}
+  };
+  const state={data:null,catalog:null,content:null,lang:'en',search:'',filter:'all',sort:'source',saved:new Set(),progress:{},mode:'learn',vocab:0,question:0,selected:null,feedback:null,correct:0,answered:0,quizFinished:false,page:null,slug:null,program:null,notice:''};
+  const read=(k,d)=>{try{return JSON.parse(localStorage.getItem('skyed-v240-'+k))??d}catch{return d}};
+  const write=(k,v)=>{try{localStorage.setItem('skyed-v240-'+k,JSON.stringify(v))}catch{/* storage can be disabled */}};
+  const t=(key)=>COPY[state.lang][key]||COPY.en[key]||key;
+  const inZh=()=>state.lang==='zh';
+  const navLinks=[['discover','home'],['programs','grid'],['lessons','book'],['saved','heart']];
+  const getEntries=()=>Array.isArray(state.catalog?.lessons)?state.catalog.lessons:[];
+  const details=item=>{const i=getEntries().indexOf(item);return {title:inZh()?TITLES[i]?.[1]||item.zh||item.title:TITLES[i]?.[0]||item.title,subtitle:TITLES[i]?.[2]||'',img:ill(PHOTO[i]||'topic-01'),source:getEntries()[i]}};
+  const slugFromLink=url=>{const m=String(url||'').match(/\/#\/lesson\/([a-z0-9-]+)$/);return m?.[1]||null};
+  const fallbackEntries=()=>Array.isArray(state.data?.lessons)?state.data.lessons.map(x=>({slug:slugFromLink(x.url),title:x.title,cover:x.media,unitId:x.groupId})).filter(x=>x.slug):[];
+  const allEntries=()=>{
+    const canonical=getEntries();
+    if(!canonical.length)return fallbackEntries();
+    const ids=new Set(canonical.map(x=>x.sourceFolder));
+    // Additional editor lessons are drafts until actual content/media are imported
+    // and teacher review is completed. Do not invent an interactive activity.
+    const drafts=(state.data?.lessons||[]).slice(11).filter(x=>!ids.has(x.id)&&x.status!=='published')
+      .map(x=>({...x,slug:x.id,draft:true,unitId:Object.keys(GROUP_MAP).find(k=>GROUP_MAP[k]===x.groupId)||'topic-sessions'}));
+    return [...canonical,...drafts];
+  };
+  const GROUP_MAP={'source-unit-1':'unit-1','source-unit-2':'unit-2','source-unit-3':'unit-3','lesson-series':'lesson-series','topic-sessions':'topic-practice'};
+  const editorial=(item)=>state.data?.lessons?.find(x=>x.id===(item.sourceFolder||item.id))||null;
+  const entryTitle=(item)=>{
+    const custom=editorial(item);
+    const title=inZh()?(custom?.displayTitleZh||custom?.displayTitle):(custom?.displayTitle);
+    if(title&&title.trim())return title.trim();
+    if(item.draft)return item.title||item.id;
+    const i=getEntries().findIndex(x=>x.slug===item.slug);
+    return TITLES[i]?.[inZh()?1:0]||item.title;
+  };
+  const entrySub=(item)=>{
+    const custom=editorial(item);
+    const subtitle=inZh()?(custom?.displaySummaryZh||custom?.displaySummary):custom?.displaySummary;
+    if(subtitle&&subtitle.trim())return subtitle.trim();
+    if(item.draft)return item.summary||'';
+    const i=getEntries().findIndex(x=>x.slug===item.slug);
+    return TITLES[i]?.[2]||'';
+  };
+  const entryPicture=(item)=>{
+    const custom=editorial(item);
+    if(typeof custom?.media==='string'&&/^assets\/media\/[a-zA-Z0-9_/-]+\.(png|jpe?g|webp)$/.test(custom.media))
+      return new URL(custom.media,document.baseURI).href;
+    const i=getEntries().findIndex(x=>x.slug===item.slug);
+    return ill(PHOTO[i]||'topic-01');
+  };
+  const activity=(slug)=>state.content?.lessons?.[slug]||null;
+  const currentSaved=(slug)=>state.saved.has(slug);
+  const completed=(slug)=>!!state.progress[slug]?.finished;
+  const markProgress=(slug,k,v)=>{state.progress[slug]={...state.progress[slug],[k]:v};write('progress',state.progress)};
+  const route=()=>{const parts=(location.hash||'#/discover').replace(/^#\/?/,'').split('/');const first=parts[0];state.page=['discover','programs','lessons','saved','program','lesson'].includes(first)?first:'discover';state.slug=null;state.program=null;
+    if(first==='lesson'){const candidate=parts[1]||'';state.slug=allEntries().find(x=>x.slug===candidate)?.slug||null;if(!state.slug)state.page='lessons'}
+    if(first==='program'){state.program=state.data?.programs?.find(x=>x.id===parts[1])||null;if(!state.program)state.page='programs'}
+  };
+  const go=(url)=>{if(location.hash===url){route();render()}else location.hash=url;window.scrollTo({top:0,behavior:'instant'});closeMenu()};
+  const button=(label,action,cls='',extra='')=>`<button type="button" class="${cls}" data-action="${action}" ${extra}>${label}</button>`;
+  const href=(hash,label,cls='')=>`<a href="${esc(hash)}" class="${cls}">${label}</a>`;
+  const toast=(message)=>{const e=$('#toast');e.textContent=message;e.classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(()=>e.classList.remove('show'),3200)};
+  const closeMenu=()=>{$('#sidebar').classList.remove('open');$('#backdrop').hidden=true;$('#menu-toggle').setAttribute('aria-expanded','false')};
+  const topbar=()=>{
+    document.documentElement.lang=state.lang;
+    $('#lobby-studio-title').textContent=state.data?.site?.title||'';
+    const s=$('#side-nav');s.innerHTML=navLinks.map(([name,ic])=>href('#/'+name,ico(ic)+`<span>${esc(t(name))}</span>${name==='saved'&&state.saved.size?`<span class="nav-count">${state.saved.size}</span>`:''}`,'nav-link '+((state.page===name||(state.page==='program'&&name==='programs')||(state.page==='lesson'&&name==='lessons'))?'active':''))).join('');
+    const crumb=state.page==='lesson'&&state.slug?entryTitle(allEntries().find(x=>x.slug===state.slug)) : state.page==='program'?state.program?.title:t(state.page);
+    $('#breadcrumb').innerHTML=href('#/discover','Course Hub')+ico('chevron')+`<strong>${esc(crumb||t('discover'))}</strong>`;
+    $('#global-search').placeholder=t('search');$('#global-search').value=state.search;
+    $('#language-label').textContent=inZh()?'中文':'EN';
+    document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.getAttribute('data-i18n')));
+    document.title='SkyED · '+(crumb||'Course Hub');
+  };
+  const banner=(kind,title='',sub='')=>`<section class="banner ${kind}"><span class="banner-shine shine-one">✦</span><span class="banner-shine shine-two">✧</span><div class="banner-copy"><p class="banner-eyebrow">${esc(t('heroSmall'))}</p><h1>${title}</h1><p>${sub}</p>${kind==='banner-home'?href('#/programs',esc(t('explore'))+ico('arrow'),'btn btn-coral'):''}</div><div class="banner-art" aria-hidden="true"></div></section>`;
+  const section=(small,title,sub,link,linkText)=>`<div class="section-heading"><div><span class="section-label"><span class="sunburst">✦</span>${esc(small)}</span><h2>${esc(title)}</h2>${sub?`<p>${esc(sub)}</p>`:''}</div>${link?href(link,esc(linkText)+ico('arrow'),'section-link'):''}</div>`;
+  const progressCount=()=>allEntries().filter(x=>completed(x.slug)).length;
+  const statBar=()=>`<section class="stats" aria-label="Library statistics"><div><span class="stat-icon blue">${ico('book')}</span><strong>${state.data?.programs?.length||0}</strong><span>${t('statPaths')}</span></div><div><span class="stat-icon coral">${ico('play')}</span><strong>${allEntries().length}</strong><span>${t('statLessons')}</span></div><div><span class="stat-icon mint">${ico('layers')}</span><strong>${state.data?.groups?.length||0}</strong><span>${t('statUnits')}</span></div></section>`;
+  const programCards=()=>`<div class="program-grid">${(state.data?.programs||[]).map((p,i)=>{
+    const info=[p.title,p.titleZh||PROG_ZH[p.id]||p.title,p.subtitle,p.subtitleZh||p.subtitle];const planned=p.placeholder;
+    return href('#/program/'+encodeURIComponent(p.id),`<div class="program-copy"><span class="program-chip">${planned?esc(t('coming')):esc(t('pilot'))}</span><h3>${esc(info[inZh()?1:0])}</h3><p>${esc(info[inZh()?3:2])}</p></div><img src="${p.image&&/^assets\/media\/[a-zA-Z0-9_/-]+\.(png|jpe?g|webp)$/.test(p.image)?new URL(p.image,document.baseURI).href:ill('path-'+(i%5+1))}" loading="lazy" alt=""><span class="circle-arrow">${ico('arrow')}</span>`,'program-card theme-'+(i%5+1)+(planned?' is-planned':''));}).join('')}</div>`;
+  const filtered=()=>{let items=allEntries().slice();const q=state.search.trim().toLocaleLowerCase();if(q)items=items.filter(x=>(entryTitle(x)+' '+entrySub(x)+' '+x.title+' '+(x.zh||'')).toLocaleLowerCase().includes(q));if(state.filter!=='all')items=items.filter(x=>x.unitId===state.filter);if(state.page==='saved')items=items.filter(x=>state.saved.has(x.slug));if(state.sort==='az')items.sort((a,b)=>entryTitle(a).localeCompare(entryTitle(b)));return items};
+  const lessonCard=(x)=>{let i=allEntries().findIndex(t=>t.slug===x.slug);return `<article class="lesson-card" data-slug="${esc(x.slug)}"><a class="lesson-image theme-${i%5+1}" href="#/lesson/${encodeURIComponent(x.slug)}" aria-label="${esc(t('open'))}: ${esc(entryTitle(x))}"><img src="${esc(entryPicture(x))}" alt="" loading="lazy"></a>${button(ico('heart'), 'save','save-heart '+(currentSaved(x.slug)?'is-saved':''),`data-slug="${esc(x.slug)}" aria-label="${esc(currentSaved(x.slug)?t('remove'):t('save'))}" aria-pressed="${currentSaved(x.slug)}"`)}<div class="lesson-info"><h3>${href('#/lesson/'+encodeURIComponent(x.slug),esc(entryTitle(x)))}</h3><p>${esc(entrySub(x))}</p><div class="lesson-foot"><span>${ico(completed(x.slug)?'check':'book')} ${esc(x.draft?t('coming'):completed(x.slug)?t('deviceProgress'):t('pilot'))}</span>${href('#/lesson/'+encodeURIComponent(x.slug),ico('arrow'),'lesson-go')}</div></div></article>`};
+  const selectedGroups=()=>[...(state.data?.groups||[])].sort((a,b)=>(a.order||0)-(b.order||0));
+  const groupTitle=(g,i)=>{
+    if(inZh()&&g.titleZh)return g.titleZh;
+    if(!g.title||/^Unit 0?\d+$/.test(g.title))return UNITS[i]?.[inZh()?1:0]||g.id;
+    return g.title;
+  };
+  const groupDescription=(g,i)=>{
+    if(inZh()&&g.subtitleZh)return g.subtitleZh;
+    if(!g.subtitle||g.subtitle.startsWith('Editable topic'))return UNITS[i]?.[inZh()?3:2]||'';
+    return g.subtitle;
+  };
+  const units=()=>`<div class="units-grid">${selectedGroups().map((g,i)=>{
+    const sourceId=Object.keys(GROUP_MAP).find(k=>GROUP_MAP[k]===g.id)||g.id;
+    const items=allEntries().filter(x=>x.unitId===sourceId);
+    const image=/^assets\/media\/[a-zA-Z0-9_/-]+\.(png|jpe?g|webp)$/.test(g.image||'')?new URL(g.image,document.baseURI).href:ill('path-'+(i%5+1));
+    return `<article class="unit-card unit-${i%5+1}"><div class="unit-cover"><span class="unit-pill">${esc(t('unit'))} ${i+1}</span><h3>${esc(groupTitle(g,i))}</h3><p>${esc(groupDescription(g,i))}</p><img src="${esc(image)}" loading="lazy" alt=""></div><div class="unit-list"><span class="unit-count">${ico('book')} ${items.length} ${esc(t('lessonsShort'))}</span>${items.map(x=>href('#/lesson/'+encodeURIComponent(x.slug),`<img src="${esc(entryPicture(x))}" loading="lazy" alt=""><span>${esc(entryTitle(x))}</span>${ico('chevron')}`,'unit-lesson')).join('')}</div></article>`
+  }).join('')}</div>`;
+  const lessonFilters=()=>{
+    const opts=[['all',t('all')],...selectedGroups().map((g,i)=>[Object.keys(GROUP_MAP).find(k=>GROUP_MAP[k]===g.id)||g.id,groupTitle(g,i)])];
+    return `<div class="filters"><label>${ico('layers')}<select id="unit-filter" aria-label="${esc(t('filter'))}">${opts.map(([v,n])=>`<option value="${esc(v)}" ${state.filter===v?'selected':''}>${esc(n)}</option>`).join('')}</select></label><label>${ico('grid')}<select id="sort-filter" aria-label="Sort lessons"><option value="source" ${state.sort==='source'?'selected':''}>${inZh()?'原始顺序':'Source order'}</option><option value="az" ${state.sort==='az'?'selected':''}>${inZh()?'按字母排序':'A–Z'}</option></select></label><span class="filter-count">${filtered().length} ${t('searchResult')}</span>${button(esc(t('reset')),'reset','filter-reset')}</div>`;
+  };
+  const cards=()=>{const results=filtered();return `${lessonFilters()}${results.length?`<div class="lesson-grid">${results.map(lessonCard).join('')}</div>`:`<div class="empty-card"><span>✦</span><h3>${t(state.page==='saved'?'savedEmpty':'empty')}</h3><p>${t(state.page==='saved'?'savedEmptyDesc':'emptyDesc')}</p>${href('#/lessons',t('viewAll'),'btn btn-blue')}</div>`}`};
+  const discover=()=>`${banner('banner-home',`${esc((inZh()?state.data.site.brightHeroTitleZh:state.data.site.brightHeroTitleEn)||t('heroA'))}<br><em>${esc((inZh()?state.data.site.brightHeroAccentZh:state.data.site.brightHeroAccentEn)||t('heroB'))}</em>`,esc((inZh()?state.data.site.brightHeroDescriptionZh:state.data.site.brightHeroDescriptionEn)||t('heroSub')))}${section(t('path'),t('paths'),t('pathDesc'),'#/programs',t('allPrograms'))}${programCards()}${section(t('all'),t('classes'),t('classDesc'),'#/lessons',t('viewAll'))}${cards()}${statBar()}`;
+  const allProgramsPage=()=>`${banner('banner-programs',esc(t('paths')),esc(t('pathDesc')))}${section(t('path'),t('paths'),t('pathDesc'))}${programCards()}${statBar()}`;
+  const lessonsPage=()=>`${section(t('all'),state.page==='saved'?t('saved'):t('classes'),state.page==='saved'?t('savedEmptyDesc'):t('classDesc'))}${cards()}${statBar()}`;
+  const programPage=()=>{const prog=state.program;if(!prog)return allProgramsPage();let planned=prog.placeholder;const isMain=prog.id==='young-learners';const index=(state.data?.programs||[]).findIndex(x=>x.id===prog.id);const info=[prog.title,prog.titleZh||PROG_ZH[prog.id]||prog.title,prog.subtitle,prog.subtitleZh||prog.subtitle];return `${banner('banner-program-detail',esc(info[inZh()?1:0]),esc(info[inZh()?3:2]))}<div class="program-intro"><div class="program-icon-big"><img src="${prog.image&&/^assets\/media\/[a-zA-Z0-9_/-]+\.(png|jpe?g|webp)$/.test(prog.image)?new URL(prog.image,document.baseURI).href:ill('path-'+(index%5+1))}" alt=""></div><div><span class="kicker">${esc(planned?t('planned'):t('path'))}</span><h2>${esc(info[inZh()?1:0])}</h2><p>${esc(planned?t('plannedDesc'):(inZh()?'目前收录 11 节经过验证的试用课程，含原始图片、中英文录音和练习。':'11 verified pilot lessons with original pictures, bilingual recordings and activities.'))}</p></div>${!planned?href('#/lessons',t('start')+ico('arrow'),'btn btn-blue'):''}</div>${planned?`<div class="empty-card"><span>✦</span><h3>${t('coming')}</h3><p>${t('plannedDesc')}</p>${href('#/programs',t('return'),'btn btn-blue')}</div>`:`${section(t('path'),t('learningJourney'),t('journeyText'))}${units()}${section(t('all'),t('classes'),t('classDesc'))}${cards()}`}`};
+  const lessonMeta=(item)=>{const v=activity(item.slug);const wordCount=v?.vocab?.length||0;const sentCount=v?.sentences?.length||0;const questionCount=v?.quiz?.questions?.length||0;return `${wordCount} ${t('picture')} · ${sentCount} ${t('sentences')} · ${questionCount} ${t('quizSection')}`};
+  const lessonTabs=()=>[['learn','book'],['listen','headphones'],['speak','mic'],['practice','grid'],['review','star']].map(([key,ic])=>button(ico(ic)+`<span>${esc(t(key==='practice'?'practice':key))}</span>`,'mode','mode-button '+(state.mode===key?'active':''),`data-mode="${key}"`)).join('');
+  const vocabulary=(v)=>{const words=v.vocab||[];const n=Math.max(0,Math.min(state.vocab,words.length-1));const word=words[n];if(!word)return `<div class="empty-card">${esc(t('notAvailable'))}</div>`;
+    return `<section class="activity-panel"><div class="activity-head"><span class="label-bubble pink">✿ ${esc(t('vocabulary'))}</span><p>${esc(t('learnIntro'))}</p><span class="count-bubble">${n+1} / ${words.length}</span></div><div class="word-display"><div class="word-art"><img src="${esc(pathAsset(word.image)||'')}" alt="${esc(word.en)}"></div><div class="word-info"><span>${esc(t('picture'))}</span><h2>${esc(word.en)}</h2><h3>${esc(word.zh||'')}</h3><div class="audio-actions">${word.audioEn&&pathAsset(word.audioEn)?button(ico('volume')+esc(t('hear')),'audio','btn btn-blue',`data-media="${esc(word.audioEn)}"`):''}${word.audioZh&&pathAsset(word.audioZh)?button(ico('volume')+esc(t('hearZh')),'audio','btn btn-light',`data-media="${esc(word.audioZh)}"`):''}</div></div></div><div class="word-pager">${button(ico('chevron'),'previous-word','pager-btn rotate',n===0?'disabled':'')}<span>${Array.from({length:Math.min(words.length,14)},(_,i)=>`<i class="pager-dot ${n===i?'active':''}"></i>`).join('')}</span>${button(ico('chevron'),'next-word','pager-btn',n===words.length-1?'disabled':'')}</div></section>`};
+  const listenSection=(v)=>{const entries=v.sentences?.length?v.sentences:v.vocab||[];return `<section class="activity-panel"><div class="activity-head"><span class="label-bubble blue">${ico('headphones')} ${t('listening')}</span><p>${t('listenIntro')}</p></div><div class="sentences">${entries.map((x,i)=>`<article class="sentence-row"><span class="sentence-number">${i+1}</span><div><strong>${esc(x.en)}</strong><small>${esc(x.zh||'')}</small></div><div class="sentence-play">${pathAsset(x.audioEn)?button(ico('volume'),'audio','round-play blue',`data-media="${esc(x.audioEn)}" aria-label="${t('hear')}"`):''}${pathAsset(x.audioZh)?button('中','audio','round-play pale',`data-media="${esc(x.audioZh)}" aria-label="${t('hearZh')}"`):''}</div></article>`).join('')}</div></section>`};
+  const speakSection=(v)=>{const entries=v.sentences?.length?v.sentences:v.vocab||[];return `<section class="activity-panel"><div class="activity-head"><span class="label-bubble orange">${ico('mic')} ${t('speaking')}</span><p>${t('speakIntro')}</p></div><div class="speaking-list">${entries.map((x,i)=>`<article class="speaking-row"><span class="bubble-number">${i+1}</span><div><strong>${esc(x.en)}</strong><small>${esc(x.zh||'')}</small></div>${pathAsset(x.audioEn)?button(ico('volume'),'audio','round-play blue',`data-media="${esc(x.audioEn)}" aria-label="${t('hear')}"`):''}</article>`).join('')}</div><div class="callout info-callout">${ico('shield')} ${esc(t('speakIntro'))}</div>${button(ico('check')+t('practiceDone'),'speak-done','btn btn-green')}</section>`};
+  const quizSection=(v)=>{const quiz=v.quiz?.questions||[];if(!quiz.length)return `<div class="empty-card">${esc(t('notAvailable'))}</div>`;
+    if(state.quizFinished)return `<section class="activity-panel quiz-finish"><div class="badge-big">${ico('star')}</div><span class="kicker">${esc(t('deviceProgress'))}</span><h2>${esc(t('finish'))}!</h2><p>${esc(t('score'))}: <strong>${state.correct}/${quiz.length}</strong></p>${button(ico('refresh')+t('again'),'restart-quiz','btn btn-blue')}<p class="little-note">${esc(t('localOnly'))}</p></section>`;
+    const index=Math.min(quiz.length-1,state.question),q=quiz[index];const hasAnswer=state.feedback!==null;let img=pathAsset(q.prompt_image);let correct=hasAnswer&&state.selected===q.answer_index;return `<section class="activity-panel quiz-panel"><div class="activity-head"><span class="label-bubble yellow">${ico('star')} ${esc(t('practice'))}</span><p>${esc(t('reviewIntro'))}</p><span class="count-bubble">${t('question')} ${index+1}/${quiz.length}</span></div><div class="quiz-inner"><div class="quiz-progress"><span style="width:${Math.round(index/quiz.length*100)}%"></span></div><h2>${esc(q.q||'')}</h2><p>${esc(q.helper||'')}</p>${img?`<img class="quiz-image" src="${esc(img)}" alt="${esc(q.q||'')}">`:''}${pathAsset(q.prompt_audio)?button(ico('volume')+t('hear'),'audio','btn btn-light quiz-sound',`data-media="${esc(q.prompt_audio)}"`):''}<div class="choice-grid">${(q.choices||[]).map((ch,i)=>button(`<span class="choice-letter">${String.fromCharCode(65+i)}</span><span>${esc(ch.text||'')}</span>`, 'choice','choice '+(state.selected===i?'selected':'')+(hasAnswer&&i===q.answer_index?' correct':'')+(hasAnswer&&state.selected===i&&i!==q.answer_index?' incorrect':''),`data-index="${i}" ${hasAnswer?'disabled':''}`)).join('')}</div>${hasAnswer?`<div class="answer-feedback ${correct?'is-correct':'is-incorrect'}">${ico(correct?'check':'refresh')} ${esc(t(correct?'correct':'incorrect'))}</div>${button(ico('arrow')+t(index===quiz.length-1?'complete':'nextQ'),'next-question','btn btn-blue')}`:button(ico('check')+t('answer'),'check-answer','btn btn-blue',state.selected===null?'disabled':'')}</div></section>`};
+  const reviewSection=(v,slug)=>`<section class="activity-panel review-panel"><div class="badge-big">${ico('star')}</div><h2>${esc(t('review'))}</h2><p>${esc(t('reviewIntro'))}</p><div class="review-numbers"><span>${v.vocab?.length||0} ${t('picture')}</span><span>${v.sentences?.length||0} ${t('sentences')}</span><span>${v.quiz?.questions?.length||0} ${t('quizSection')}</span></div><p class="little-note">${esc(t('localOnly'))}</p>${completed(slug)?`<div class="answer-feedback is-correct">${ico('check')} ${t('deviceProgress')}</div>`:''}${button(ico('play')+t('quiz'),'mode','btn btn-green',`data-mode="practice"`)}</section>`;
+  const lessonPage=()=>{let item=allEntries().find(x=>x.slug===state.slug);if(!item)return lessonsPage();let content=activity(item.slug);let modes=['learn','listen','speak','practice','review'];const overviewContent=!content?`<div class="empty-card"><span>✦</span><h3>${t('notAvailable')}</h3><p>${t('noCatalog')}</p>${href('#/lessons',t('back'),'btn btn-blue')}</div>`:state.mode==='learn'?vocabulary(content):state.mode==='listen'?listenSection(content):state.mode==='speak'?speakSection(content):state.mode==='practice'?quizSection(content):reviewSection(content,item.slug);
+    const idx=allEntries().findIndex(x=>x.slug===item.slug),next=allEntries()[idx+1];return `${banner('banner-lesson',esc(entryTitle(item)),esc(entrySub(item)))}<div class="lesson-badges"><span>${ico('book')} ${esc(t('pilot'))}</span><span>${ico('layers')} ${esc(UNITS[["source-unit-1","source-unit-2","source-unit-3","lesson-series","topic-sessions"].indexOf(item.unitId)]?.[inZh()?1:0]||'')}</span><span>${ico('shield')} ${esc(t('source'))}</span></div><div class="learning-layout"><div class="learning-main"><div class="learning-tabs" role="group" aria-label="Learning modes">${lessonTabs()}</div>${overviewContent}<div class="lesson-bottom-nav">${href('#/program/young-learners',ico('chevron')+t('back'),'btn btn-light btn-back')}${next?href('#/lesson/'+encodeURIComponent(next.slug),t('next')+ico('arrow'),'btn btn-blue'):''}</div></div><aside class="learning-side"><div class="side-widget"><h3>${ico('book')} ${esc(t('activity'))}</h3><p>${esc(lessonMeta(item))}</p><div class="lesson-step-list">${modes.map((mode,i)=>button(`<span>${i+1}</span>${esc(t(mode==='practice'?'practice':mode))}`,'mode','step '+(state.mode===mode?'current':''),`data-mode="${mode}"`)).join('')}</div></div><div class="side-widget lesson-notes"><h3>${ico('star')} ${esc(t('notes'))}</h3><p>${esc(t('notesText'))}</p><div class="note-grid"><span>${ico('volume')} ${esc(t('listen'))}</span><span>${ico('mic')} ${esc(t('speak'))}</span><span>${ico('check')} ${esc(t('practice'))}</span></div></div><div class="side-widget disclaimer">${ico('shield')} ${esc(t('notPublished'))}<small>${esc(t('localOnly'))}</small></div></aside></div>`};
+  const render=()=>{route();topbar();const main=$('#main');main.innerHTML=(state.page==='discover'?discover():state.page==='programs'?allProgramsPage():state.page==='program'?programPage():state.page==='lesson'?lessonPage():lessonsPage());
+    const count=progressCount();$('#status-footer').textContent=t('notPublished')+' · '+(count?`${count} ${t('deviceProgress')}`:t('localOnly'));
+  };
+  function resetQuiz(){state.question=0;state.selected=null;state.feedback=null;state.correct=0;state.answered=0;state.quizFinished=false}
+  let currentAudio=null;
+  const playAudio=async(src)=>{const url=pathAsset(src);if(!url)return toast(t('notAvailable'));if(currentAudio){currentAudio.pause();currentAudio=null}const audio=new Audio(url);currentAudio=audio;audio.addEventListener('ended',()=>{if(currentAudio===audio)currentAudio=null});audio.addEventListener('error',()=>toast(inZh()?'音频播放失败，请确认媒体文件完整。':'Audio unavailable. Check the captured media.'));try{await audio.play()}catch{toast(inZh()?'浏览器无法播放此音频。':'Your browser could not play this audio.')}};
+  document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(!el)return;const action=el.dataset.action;
+    if(action==='save'){const slug=el.dataset.slug;if(!allEntries().some(x=>x.slug===slug))return;state.saved.has(slug)?state.saved.delete(slug):state.saved.add(slug);write('saved',[...state.saved]);render();return}
+    if(action==='reset'){state.search='';state.filter='all';state.sort='source';render();return}
+    if(action==='mode'){state.mode=el.dataset.mode;if(state.mode==='practice'&&!state.quizFinished&&state.question===0)resetQuiz();render();return}
+    if(action==='audio'){playAudio(el.dataset.media);return}
+    if(action==='previous-word'){state.vocab=Math.max(0,state.vocab-1);render();return}
+    if(action==='next-word'){const a=activity(state.slug);state.vocab=Math.min(Math.max(0,a?.vocab?.length-1||0),state.vocab+1);render();return}
+    if(action==='speak-done'){markProgress(state.slug,'spoke',true);toast(t('practiceDone'));return}
+    if(action==='choice'){const choice=Number(el.dataset.index);if(!Number.isSafeInteger(choice)||state.feedback!==null)return;state.selected=choice;render();return}
+    if(action==='check-answer'){let qs=activity(state.slug)?.quiz?.questions||[];let q=qs[state.question];if(!q||state.selected===null)return;state.feedback=state.selected===q.answer_index?'correct':'incorrect';if(state.feedback==='correct')state.correct++;state.answered++;render();return}
+    if(action==='next-question'){let questions=activity(state.slug)?.quiz?.questions||[];if(state.feedback===null)return;if(state.question+1>=questions.length){state.quizFinished=true;markProgress(state.slug,'finished',true);markProgress(state.slug,'score',state.correct);markProgress(state.slug,'total',questions.length)}else state.question++;state.selected=null;state.feedback=null;render();return}
+    if(action==='restart-quiz'){resetQuiz();render();return}
+  });
+  $('#global-search').addEventListener('input',e=>{state.search=e.target.value;state.filter='all';if(state.page!=='lessons'&&state.page!=='saved')go('#/lessons');else render();$('#global-search').focus();$('#global-search').setSelectionRange(state.search.length,state.search.length)});
+  document.addEventListener('change',e=>{if(e.target.id==='unit-filter'){state.filter=e.target.value;render()}if(e.target.id==='sort-filter'){state.sort=e.target.value;render()}});
+  $('#language-toggle').addEventListener('click',()=>{state.lang=inZh()?'en':'zh';write('language',state.lang);render()});
+  $('#menu-toggle').addEventListener('click',()=>{const open=$('#sidebar').classList.toggle('open');$('#backdrop').hidden=!open;$('#menu-toggle').setAttribute('aria-expanded',String(open))});$('#backdrop').addEventListener('click',closeMenu);
+  window.addEventListener('hashchange',()=>{state.vocab=0;resetQuiz();state.mode='learn';render();window.scrollTo(0,0)});
+  const fetchJSON=async(u)=>{try{const r=await fetch(u,{cache:'no-store'});if(!r.ok)return null;return await r.json()}catch{return null}};
+  const init=async()=>{
+    state.lang=read('language','en')==='zh'?'zh':'en';state.progress=read('progress',{});state.saved=new Set((read('saved',[])||[]).filter(x=>typeof x==='string'&&x.length<200));
+    const [data,catalog,content]=await Promise.all([fetchJSON('content/lobby.json'),fetchJSON('../data/catalog.v1.json'),fetchJSON('../data/content.v1.json')]);
+    if(!data||!Array.isArray(data.programs)||!Array.isArray(data.lessons)){ $('#main').innerHTML='<div class="empty-card"><h2>Course Hub could not load the lobby library.</h2><p>Verify the local HTTP server and the content/lobby.json file.</p></div>';return}
+    state.data=data;
+    // Never treat an arbitrary incoming file as a published/approved catalog.
+    if(catalog?.schema==='skyed.course-hub.catalog.v1'&&content?.schema==='skyed.course-hub.content.v1'&&catalog.published===false&&Array.isArray(catalog.lessons)&&catalog.lessons.length===11&&catalog.lessons.every(x=>content.lessons?.[x.slug])){state.catalog=catalog;state.content=content}
+    render();
+  };
+  init();
+})();
