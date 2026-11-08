@@ -50,7 +50,7 @@
     const ids=new Set(canonical.map(x=>x.sourceFolder));
     // Additional editor lessons are drafts until actual content/media are imported
     // and teacher review is completed. Do not invent an interactive activity.
-    const drafts=(state.data?.lessons||[]).filter(x=>!ids.has(x.id)&&x.status!=='published')
+    const drafts=(state.data?.lessons||[]).slice(11).filter(x=>!ids.has(x.id)&&x.status!=='published')
       .map(x=>({...x,slug:x.id,draft:true,unitId:Object.keys(GROUP_MAP).find(k=>GROUP_MAP[k]===x.groupId)||'topic-sessions'}));
     return [...canonical,...drafts];
   };
