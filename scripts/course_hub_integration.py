@@ -21,7 +21,7 @@ import sys
 import tempfile
 from urllib.parse import unquote, urlsplit, quote
 
-RELEASE = "2.4.0"
+RELEASE = "2.5.0"
 PREVIEW_DIR = "lobby-preview"
 STATIC_SUFFIXES = {".html", ".htm", ".css", ".js", ".json", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".gif", ".ico", ".mp3", ".wav", ".ogg", ".m4a", ".txt", ".webmanifest", ".woff2"}
 MEDIA_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".mp3", ".wav", ".ogg", ".m4a"}
@@ -234,7 +234,7 @@ def reconcile_catalog(source: Path, existing_files: list, lobby_draft: dict):
     entries = catalog.get("lessons")
     if not isinstance(entries,list) or len(entries) != 11 or not isinstance(content.get("lessons"),dict):
         raise GateError("CATALOG_GATE=BLOCKED: expected exactly 11 source pilot lessons")
-    if len(lobby_draft.get("lessons",[])) != 11:
+    if len(lobby_draft.get("lessons",[])) < 11:
         raise GateError("CATALOG_GATE=BLOCKED: lobby pilot placeholders no longer match source")
     main = (source / "index.html").read_text(encoding="utf-8-sig")
     app_name = "assets/app-v1.2.0.js"
@@ -268,8 +268,10 @@ def reconcile_catalog(source: Path, existing_files: list, lobby_draft: dict):
     for source_id, target_id in UNIT_TO_LOBBY_GROUP.items():
         unit = source_units[source_id]
         target = next(x for x in derived["groups"] if x["id"]==target_id)
-        target["title"] = unit["title"]
-        target["subtitle"] = unit.get("subtitle","")
+        if not target.get("title") or re.fullmatch(r"Unit 0?[1-9]",target["title"]):
+            target["title"] = unit["title"]
+        if not target.get("subtitle") or target["subtitle"].startswith("Editable topic"):
+            target["subtitle"] = unit.get("subtitle","")
     card_list=[]
     review=[]
     total_audio=total_images=0
@@ -313,7 +315,21 @@ def reconcile_catalog(source: Path, existing_files: list, lobby_draft: dict):
         })
     if len({x["id"] for x in card_list})!=11 or len({x["url"] for x in card_list})!=11:
         raise GateError("CATALOG_GATE=BLOCKED: duplicate mapped pilot")
-    derived["lessons"] = card_list
+    # Keep local-only additional lesson drafts without inventing an approved route.
+    # Their content cannot be published until an approved content migration exists.
+    existing_ids={x['id'] for x in card_list}
+    editorial={x['id']:x for x in lobby_draft['lessons'] if isinstance(x,dict)}
+    for index,card in enumerate(card_list):
+        old=editorial.get(card['id']) or lobby_draft['lessons'][index]
+        for key in ('displayTitle','displayTitleZh','displaySummary','displaySummaryZh'):
+            if isinstance(old.get(key),str) and old[key].strip():card[key]=old[key].strip()
+    draft_extras=[]
+    for item in lobby_draft['lessons'][11:]:
+        if item['id'] not in existing_ids:
+            if item.get('status')=='published' or item.get('url'):
+                raise GateError('NEW_LESSON_REQUIRES_CONTENT_APPROVAL: '+item['id'])
+            draft_extras.append(item)
+    derived["lessons"] = card_list + draft_extras
     for p in derived["programs"]:
         if p["id"]=="young-learners":
             p["description"] = "11 authentic lessons from the captured Course Hub, including original picture cards, bilingual audio and interactive practice."
@@ -405,7 +421,7 @@ def safe_tree_for_lobby(root: Path):
     allowed = {"index.html", "assets/app.js", "assets/styles.css", "assets/favicon.svg", "content/lobby.json"}
     allowed_illustrations = {f"assets/illustrations/{name}.webp" for name in (
         "hero-art", "program-art", "lesson-art", *(f"path-{i}" for i in range(1, 6)),
-        *(f"topic-{i:02d}" for i in range(1, 11)),
+        *(f"topic-{i:02d}" for i in range(1, 12)),
     )}
     items=[]
     for file in sorted(root.rglob("*")):
@@ -428,7 +444,9 @@ def safe_tree_for_lobby(root: Path):
     # frontend files. Keep those previous stage builds usable. For a Bright
     # stage, artwork is an indivisible bundle: never stage a partial set.
     provided_illustrations = included & allowed_illustrations
-    if provided_illustrations and provided_illustrations != allowed_illustrations:
+    # The v2.4 image set (without topic-11) is still a valid historical stage.
+    previous_illustrations=allowed_illustrations-{"assets/illustrations/topic-11.webp"}
+    if provided_illustrations and provided_illustrations not in (allowed_illustrations,previous_illustrations):
         raise GateError("Required Bright lobby illustrations missing")
     return items
 

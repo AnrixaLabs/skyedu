@@ -2,3 +2,5 @@
 
 .workspace.single{grid-template-columns:minmax(0,1fr)}.workspace.single .form-pane{max-width:990px}.form-pane #fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22px}.form-field:has(textarea){grid-column:span 2}.workspace.single #fields .form-field:has(textarea){grid-column:span 2}.workspace.single .form-field:has(input[readonly]){grid-column:span 2}@media(max-width:620px){.form-pane #fields{grid-template-columns:1fr}.form-field:has(textarea){grid-column:span 1}.workspace.single #fields .form-field:has(textarea){grid-column:span 1}}
 [hidden]{display:none!important}
+
+.asset-upload{display:block;max-width:100%;margin:10px 0 6px;font-size:12px;padding:9px 5px;background:#eef7ff;border-radius:10px}

@@ -4,10 +4,10 @@
 const id=x=>document.getElementById(x);
 const state={data:null,section:'site',selected:0,dirty:false,sessionToken:null,saving:false};
 const fields={
- site:[['brand','Brand name','text'],['brandDetail','Small brand label','text'],['eyebrow','Page kicker','text'],['title','Main page heading','text'],['subtitle','Heading description','textarea'],['announcement','Draft information bar','textarea'],['heroLabel','Hero eyebrow','text'],['heroTitle','Hero headline','text'],['heroDescription','Hero description','textarea'],['heroImage','Optional hero image (assets/media/...png)','text'],['heroAction','Hero button label','text'],['footer','Footer text','text'],['backToCurrentSiteUrl','Back to existing website URL','text']],
- programs:[['id','Stable identifier','readonly'],['title','Program title','text'],['subtitle','Card subtitle','textarea'],['description','Program description','textarea'],['image','Optional tile image (assets/media/...png)','text'],['level','Age / level','text'],['category','Category','text'],['color','Tile color','select:coral,lilac,blue,mint,yellow'],['icon','Icon','select:sparkles,book,chat,shapes,target'],['tag','Small card label','text'],['order','Display order','number'],['lessonCount','Display lesson count (update after approved import)','number'],['featured','Featured tile (large)','checkbox'],['placeholder','Placeholder — not an approved program','checkbox'],['status','Publication status','select:planned,library-awaiting-link,published']],
- groups:[['id','Stable group ID','readonly'],['title','Group / unit title','text'],['subtitle','Group description','textarea'],['order','Display order','number']],
- lessons:[['id','Stable lesson ID','readonly'],['programId','Parent program ID','reference:programs'],['groupId','Parent group ID','reference:groups'],['title','Approved lesson title','text'],['summary','Lesson description','textarea'],['type','Content type','select:Vocabulary,Speaking,Listening,Practice,Story'],['level','Age / level','text'],['minutes','Duration (0 if unknown)','number'],['order','Display order','number'],['status','Lesson status','select:needs-link,draft,published'],['url','Approved lesson URL (blank until verified)','text'],['media','Optional media path','text'],['tags','Search tags (comma-separated)','csv']]
+ site:[['brand','Brand name','text'],['brandDetail','Small brand label','text'],['eyebrow','Page kicker','text'],['title','Main page heading','text'],['subtitle','Heading description','textarea'],['announcement','Draft information bar','textarea'],['brightHeroTitleEn','Bright hero title (English)','text'],['brightHeroTitleZh','Bright hero title (中文)','text'],['brightHeroAccentEn','Bright hero accent (English)','text'],['brightHeroAccentZh','Bright hero accent (中文)','text'],['heroLabel','Hero eyebrow','text'],['heroTitle','Hero headline','text'],['heroDescription','Hero description','textarea'],['heroImage','Optional hero image (assets/media/...png)','text'],['heroAction','Hero button label','text'],['footer','Footer text','text'],['backToCurrentSiteUrl','Back to existing website URL','text']],
+ programs:[['id','Stable identifier','readonly'],['title','Program title (English)','text'],['titleZh','Program title (中文)','text'],['subtitleZh','Card subtitle (中文)','textarea'],['subtitle','Card subtitle','textarea'],['description','Program description','textarea'],['image','Optional tile image (assets/media/...png)','text'],['level','Age / level','text'],['category','Category','text'],['color','Tile color','select:coral,lilac,blue,mint,yellow'],['icon','Icon','select:sparkles,book,chat,shapes,target'],['tag','Small card label','text'],['order','Display order','number'],['lessonCount','Display lesson count (update after approved import)','number'],['featured','Featured tile (large)','checkbox'],['placeholder','Placeholder — not an approved program','checkbox'],['status','Publication status','select:planned,library-awaiting-link,published']],
+ groups:[['id','Stable group ID','readonly'],['title','Group / unit title','text'],['titleZh','Group title (中文)','text'],['subtitleZh','Group description (中文)','textarea'],['image','Optional high-resolution unit art','text'],['subtitle','Group description','textarea'],['order','Display order','number']],
+ lessons:[['id','Stable lesson ID','readonly'],['programId','Parent program ID','reference:programs'],['groupId','Parent group ID','reference:groups'],['title','Source lesson label','text'],['displayTitle','Displayed title (English)','text'],['displayTitleZh','Displayed title (中文)','text'],['displaySummary','Displayed subtitle (English)','text'],['displaySummaryZh','Displayed subtitle (中文)','text'],['summary','Lesson description','textarea'],['type','Content type','select:Vocabulary,Speaking,Listening,Practice,Story'],['level','Age / level','text'],['minutes','Duration (0 if unknown)','number'],['order','Display order','number'],['status','Lesson status','select:needs-link,draft,published'],['url','Approved lesson URL (blank until verified)','text'],['media','Optional media path','text'],['tags','Search tags (comma-separated)','csv']]
 };
 const el=(tag,cls='',text='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=text;return e;};
 const activeItems=()=>state.section==='site'? [state.data.site]:(state.data[state.section]||[]);
@@ -57,6 +57,24 @@ function draw(){
   wrap.append(text);wrap.append(control);
   if(name==='url')wrap.append(el('span','hint','Only publish after verifying the exact URL and the underlying approved lesson.'));
   if(name==='id')wrap.append(el('span','hint','Locked to protect lesson/program references; duplicates receive a new ID.'));
+  if((name==='image'||name==='media')&&state.sessionToken){
+    const uploader=el('input');uploader.type='file';uploader.accept='image/png,image/webp';
+    uploader.className='asset-upload';uploader.setAttribute('aria-label','Upload a high resolution local image');
+    uploader.addEventListener('change',async()=>{
+      const file=uploader.files?.[0];if(!file)return;
+      if(file.size>12*1024*1024){message('Image exceeds 12 MB.',true);return;}
+      try{
+        message('Uploading image to the private local workspace…');
+        const response=await fetch('../api/upload-image',{method:'POST',headers:{'X-SkyED-Editor-Token':state.sessionToken,'Content-Type':file.type},body:file});
+        const uploaded=await response.json();
+        if(!response.ok||!uploaded.uploaded)throw Error(uploaded.error||'Upload failed');
+        row[name]=uploaded.path;state.dirty=true;draw();
+        message(`Image ready: ${uploaded.width} × ${uploaded.height}. Click Save to workspace to keep its reference.`);
+      }catch(error){message('Upload blocked: '+error.message,true);}
+    });
+    wrap.append(uploader);
+    wrap.append(el('span','hint','PNG / WebP · minimum 800 × 500 px · maximum 12 MB · locally stored, never published automatically'));
+  }
   out.append(wrap);
  }
 }
